@@ -27,8 +27,8 @@ export const PAGES: { href: string; label: string; icon: IconName; id: string; c
   { href: '/', label: 'Dashboard', icon: 'grid', id: 'nav-dashboard' },
   { href: '/saman', label: 'Saman', icon: 'list', id: 'nav-saman', count: 'items' },
   { href: '/stock', label: 'Stock', icon: 'layers', id: 'nav-stock', count: 'stock' },
-  { href: '/kisko-diya', label: 'Kisko diya', icon: 'users', id: 'nav-kisko-diya', count: 'issues' },
   { href: '/demand', label: 'Demand List', icon: 'list', id: 'nav-demand' },
+  { href: '/kisko-diya', label: 'Kisko diya', icon: 'users', id: 'nav-kisko-diya', count: 'issues' },
   { href: '/hisaab', label: 'Hisaab', icon: 'chart', id: 'nav-hisaab' },
   { href: '/settings', label: 'Settings', icon: 'gear', id: 'nav-settings' },
 ];
