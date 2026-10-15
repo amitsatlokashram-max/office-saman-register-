@@ -1,0 +1,21 @@
+# dependencies
+/node_modules
+
+# next.js build
+/.next/
+/out/
+
+# env files (asli keys kabhi GitHub pe mat daalo)
+.env
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# misc
+.DS_Store
+npm-debug.log*

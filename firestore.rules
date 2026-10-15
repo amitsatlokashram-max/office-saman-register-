@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// Office Saman Register — Firestore security rules
+// 1. Neeche APNA_EMAIL@gmail.com ki jagah apna Gmail likho (sirf chhote letters me).
+// 2. Ye poora text Firebase console → Firestore Database → Rules me paste karke "Publish" dabao.
+//
+// Owner (ye email) hamesha andar aa sakta hai aur Team badal sakta hai.
+// Team ke log (app ki Settings → Team me jo email daale) entry dekh aur likh sakte hai.
+// Baaki koi bhi kuch nahi dekh sakta.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function isOwner() {
+      return signedIn() && request.auth.token.email.lower() == 'APNA_EMAIL@gmail.com';
+    }
+
+    function isMember() {
+      return isOwner() || (
+        signedIn()
+        && exists(/databases/$(database)/documents/config/access)
+        && request.auth.token.email.lower() in get(/databases/$(database)/documents/config/access).data.emails
+      );
+    }
+
+    // Team list: sab member padh sakte hai, sirf owner badal sakta hai
+    match /config/access {
+      allow read: if isMember();
+      allow write: if isOwner();
+    }
+
+    // Saman ki entries
+    match /purchases/{id} {
+      allow read, write: if isMember();
+    }
+
+    // Kam se kam stock wali setting
+    match /settings/{id} {
+      allow read, write: if isMember();
+    }
+
+    // Bill ki photo / PDF (har bill 900 KB tak)
+    match /bills/{id} {
+      allow read, delete: if isMember();
+      allow create, update: if isMember() && request.resource.data.size <= 950000;
+    }
+  }
+}
