@@ -72,7 +72,6 @@ export function DemandList() {
 
   async function handleReceiveDemand(d: DemandItem) {
     try {
-      // 1. Main purchases / stock register me entry create karein
       await addDoc(collection(db, 'purchases'), {
         item: d.item,
         category: 'General',
@@ -91,7 +90,6 @@ export function DemandList() {
         createdAt: new Date().toISOString(),
       });
 
-      // 2. Demand status update karein
       await updateDoc(doc(db, 'demands', d.id), { status: 'received' });
       toast(`"${d.item}" main Stock register mein jud gaya!`);
     } catch {
@@ -129,7 +127,6 @@ export function DemandList() {
         </button>
       </div>
 
-      {/* Demand Add Form */}
       <form onSubmit={handleAddDemand} style={{ background: 'var(--card-bg, #1e293b)', padding: '16px', borderRadius: '10px', marginBottom: '24px', border: '1px solid var(--border, #334155)' }}>
         <h3 style={{ marginBottom: '12px', fontSize: '15px' }}>Naye Saman ki Demand List Jodein</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '12px' }}>
@@ -144,7 +141,6 @@ export function DemandList() {
         </button>
       </form>
 
-      {/* Pending Items */}
       <h3 style={{ marginBottom: '10px' }}>Mangwaya Jane Wala Saman ({pendingList.length})</h3>
       {pendingList.length === 0 ? (
         <p className="muted" style={{ marginBottom: '24px' }}>Abhi koi pending demand nahi hai.</p>
@@ -172,7 +168,6 @@ export function DemandList() {
         </div>
       )}
 
-      {/* Received Items */}
       {receivedList.length > 0 && (
         <details style={{ marginTop: '20px' }}>
           <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#94a3b8' }}>Pehle Mangwaya Gaya Saman ({receivedList.length})</summary>
