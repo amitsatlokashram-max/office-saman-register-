@@ -78,7 +78,7 @@ export function DemandList() {
         category: 'General',
         qty: d.qty,
         rate: d.rate || 0,
-        total: (d.qty) * (d.rate || 0),
+        total: d.qty * (d.rate || 0),
         orderDate: d.createdAt.slice(0, 10) || today(),
         receivedDate: today(),
         vendor: d.link ? 'Online / Buy Link' : 'Market',
@@ -110,7 +110,7 @@ export function DemandList() {
     const text = pendingList
       .map(
         (d, i) =>
-          `${i + 1}. *${d.item}* - ${d.qty} pcs${d.rate ? ` (Est. ₹${d.rate})` : ''}${
+          `${i + 1}. *${d.item}*\n   ${d.qty} pcs${d.rate ? ` (Est. ₹${d.rate})` : ''}${
             d.link ? `\n   Link: ${d.link}` : ''
           }${d.note ? `\n   Note: ${d.note}` : ''}`
       )
