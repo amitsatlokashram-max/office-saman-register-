@@ -109,7 +109,6 @@ export default function Shell({ children }: { children: ReactNode }) {
     if (phase !== 'ready') return;
     let live = true;
     fetchAiStatus().then((s) => live && setAi(s));
-    // Google Sheet + Drive: chalu ho to bache hue badlav bhejna shuru
     fetchGoogleStatus().then((on) => {
       if (!live) return;
       setGoogleOn(on);
@@ -125,7 +124,7 @@ export default function Shell({ children }: { children: ReactNode }) {
     setSyncMe(me);
   }, [me]);
 
-  /* ---------- phone menu: page badle ya Esc dabe to band ---------- */
+  /* ---------- phone menu ---------- */
   useEffect(() => setMenuOpen(false), [path]);
   useEffect(() => {
     if (!menuOpen) return;
@@ -134,14 +133,13 @@ export default function Shell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', k);
   }, [menuOpen]);
 
-  /* ---------- ek entry ki parchi print ---------- */
+  /* ---------- print ---------- */
   useEffect(() => {
     if (!slipId) return;
     const html = document.documentElement;
     html.classList.add('slip-mode');
     const done = () => setSlipId(null);
     window.addEventListener('afterprint', done, { once: true });
-    // drawer band hone aur parchi banne ka thoda intezaar
     const t = window.setTimeout(() => window.print(), 120);
     return () => {
       window.clearTimeout(t);
