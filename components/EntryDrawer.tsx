@@ -7,7 +7,7 @@ import { MOVE, fdate, inr, issuedQty, moveSum, myPay, num, regNos, remaining, st
 import { errCode } from '@/lib/errors';
 import { deleteItemDoc } from '@/lib/firebase';
 import { explain, explainAi, explainUpload } from '@/lib/messages';
-import type { Bill, Item } from '@/lib/types';
+import type { Bill, Issue, Item } from '@/lib/types';
 import { BillImg } from './BillThumb';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
@@ -44,6 +44,15 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
   const { items, getItem, toast, ai, me, printEntry } = useReg();
   const save = useSave();
   const [ui, setUi] = useState<UI>({});
+  
+  // Kisko diya edit state
+  const [editIssueId, setEditIssueId] = useState<string | null>(null);
+  const [editPerson, setEditPerson] = useState('');
+  const [editDept, setEditDept] = useState('');
+  const [editQty, setEditQty] = useState<number | string>(1);
+  const [editDate, setEditDate] = useState(today());
+  const [editNote, setEditNote] = useState('');
+
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -83,6 +92,53 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
     } catch (e) {
       toast(explain(e));
     }
+  }
+
+  function startEditIssue(is: Issue) {
+    setEditIssueId(is.id);
+    setEditPerson(is.person || '');
+    setEditDept(is.dept || '');
+    setEditQty(is.qty || 1);
+    setEditDate(is.date || today());
+    setEditNote(is.note || '');
+  }
+
+  async function saveIssue(iid: string) {
+    if (!editPerson.trim()) {
+      toast('Naam likhna zaroori hai.');
+      return;
+    }
+    const q = num(editQty);
+    if (q <= 0) {
+      toast('Piece kam se kam 1 hona chahiye.');
+      return;
+    }
+    const cur = getItem(id);
+    if (!cur) return;
+    const oldIss = cur.issues.find((i) => i.id === iid);
+    const oldQty = oldIss ? num(oldIss.qty) : 0;
+    const diff = q - oldQty;
+    if (diff > 0 && remaining(cur) < diff) {
+      toast('Itne piece stock me bache nahi hain.');
+      return;
+    }
+
+    await update((d) => {
+      d.issues = d.issues.map((i) => {
+        if (i.id === iid) {
+          return {
+            ...i,
+            person: editPerson.trim(),
+            dept: editDept.trim(),
+            qty: q,
+            date: editDate || today(),
+            note: editNote.trim(),
+          };
+        }
+        return i;
+      });
+    }, 'Badlav save ho gaye');
+    setEditIssueId(null);
   }
 
   async function deleteIssue(iid: string) {
@@ -130,7 +186,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
     if (!cur) return;
     try {
       await deleteItemDoc(id);
-      queueEntryDelete(cur, items); // Sheet se line aur Drive se bill
+      queueEntryDelete(cur, items);
       cur.bills.forEach((b) => delBillIfUnused(b.id, items, id));
       onClose();
       toast('Entry delete ho gayi');
@@ -358,27 +414,84 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
           {issues.length ? (
             <ul className="issues">
               {issues.map((is) => (
-                <li key={is.id}>
-                  <div className="iss-main">
-                    <strong>{[is.person, is.dept].filter(Boolean).join(' · ') || '—'}</strong>
-                    <small>{[fdate(is.date), is.note, is.byName ? 'likha: ' + is.byName : ''].filter(Boolean).join(' · ')}</small>
-                  </div>
-                  {ui.confirmIssue === is.id ? (
-                    <div className="inline-confirm">
-                      <span>Hatao?</span>
-                      <button type="button" className="btn sm danger" onClick={() => deleteIssue(is.id)}>
-                        Haan
-                      </button>
-                      <button type="button" className="btn sm" onClick={() => patchUi({ confirmIssue: null })}>
-                        Nahi
-                      </button>
+                <li key={is.id} style={{ flexDirection: editIssueId === is.id ? 'column' : 'row', alignItems: editIssueId === is.id ? 'stretch' : 'center' }}>
+                  {editIssueId === is.id ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '6px 0', width: '100%' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="Kisko diya (Naam)"
+                          value={editPerson}
+                          onChange={(e) => setEditPerson(e.target.value)}
+                          style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Department"
+                          value={editDept}
+                          onChange={(e) => setEditDept(e.target.value)}
+                          style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="number"
+                          placeholder="Qty"
+                          min={1}
+                          value={editQty}
+                          onChange={(e) => setEditQty(e.target.value)}
+                          style={{ width: '80px', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' }}
+                        />
+                        <input
+                          type="date"
+                          value={editDate}
+                          onChange={(e) => setEditDate(e.target.value)}
+                          style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' }}
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Note (optional)"
+                        value={editNote}
+                        onChange={(e) => setEditNote(e.target.value)}
+                        style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                        <button type="button" className="btn sm primary" onClick={() => saveIssue(is.id)}>
+                          Save karo
+                        </button>
+                        <button type="button" className="btn sm" onClick={() => setEditIssueId(null)}>
+                          Radd karo
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <>
-                      <span className="iss-qty">{num(is.qty)} pcs</span>
-                      <button type="button" className="iconbtn sm" onClick={() => patchUi({ confirmIssue: is.id })} aria-label="Ye entry hatao" title="Hatao">
-                        <Icon name="trash" />
-                      </button>
+                      <div className="iss-main">
+                        <strong>{[is.person, is.dept].filter(Boolean).join(' · ') || '—'}</strong>
+                        <small>{[fdate(is.date), is.note, is.byName ? 'likha: ' + is.byName : ''].filter(Boolean).join(' · ')}</small>
+                      </div>
+                      {ui.confirmIssue === is.id ? (
+                        <div className="inline-confirm">
+                          <span>Hatao?</span>
+                          <button type="button" className="btn sm danger" onClick={() => deleteIssue(is.id)}>
+                            Haan
+                          </button>
+                          <button type="button" className="btn sm" onClick={() => patchUi({ confirmIssue: null })}>
+                            Nahi
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="iss-qty">{num(is.qty)} pcs</span>
+                          <button type="button" className="iconbtn sm" onClick={() => startEditIssue(is)} aria-label="Edit karo" title="Edit karo">
+                            <Icon name="edit" />
+                          </button>
+                          <button type="button" className="iconbtn sm" onClick={() => patchUi({ confirmIssue: is.id })} aria-label="Ye entry hatao" title="Hatao">
+                            <Icon name="trash" />
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 </li>
