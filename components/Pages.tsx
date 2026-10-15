@@ -25,6 +25,7 @@ import { Icon } from './Icon';
 import { EmptyState, FiltersBar, NoRes, PageHead } from './PageParts';
 import { SettingsSections } from './Modals';
 import { useReg } from './context';
+import { DemandList } from './DemandList';
 
 /* ====================== Saman ki list ====================== */
 function subLine(it: Item) {
@@ -617,6 +618,16 @@ export function SettingsPage() {
     <>
       <PageHead title="Settings" sub="Aapka account, team, AI aur Google Sheet" print={false} add={false} />
       <SettingsSections />
+    </>
+  );
+}
+
+/* ====================== Demand List ====================== */
+export function DemandPage() {
+  return (
+    <>
+      <PageHead title="Demand List / Orders" sub="Naya saman order requirement, WhatsApp slip aur stock conversion" print={false} add={false} />
+      <DemandList />
     </>
   );
 }
