@@ -68,16 +68,13 @@ export function Gate({
             <div className="art">
               <Icon name="lock" />
             </div>
-            <h2>Abhi access nahi hai</h2>
-            <p>
-              Aap <code>{email}</code> se sign in ho. Register ke owner se kaho ki Settings → Team me ye email jod de, phir &quot;Dobara try karo&quot; dabao.
+            <h2>Access Not Allowed 🔒</h2>
+            <p style={{ margin: '12px 0 20px 0', fontSize: '14px', color: '#94a3b8' }}>
+              Aapka email <code>{email}</code> is portal par authorized nahi hai.
             </p>
             <div className="inrow" style={{ justifyContent: 'center' }}>
-              <button type="button" className="btn primary" onClick={() => window.location.reload()}>
-                Dobara try karo
-              </button>
-              <button type="button" className="btn" onClick={onSignOut}>
-                Sign out
+              <button type="button" className="btn primary" onClick={onSignOut}>
+                Sign Out / Change Account
               </button>
             </div>
           </>
