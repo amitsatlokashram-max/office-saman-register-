@@ -119,6 +119,26 @@ export function DemandList() {
   const receivedList = demands.filter((d) => d.status === 'received');
   const grandTotal = pendingList.reduce((sum, d) => sum + d.qty * (d.rate || 0), 0);
 
+  function shareWhatsApp() {
+    if (!pendingList.length) {
+      toast('Koi pending demand nahi hai.');
+      return;
+    }
+    const text = pendingList
+      .map(
+        (d, i) =>
+          `${i + 1}. *${d.item}*\n   Qty: ${d.qty} pcs${d.rate ? ` | Est: ₹${d.rate * d.qty}` : ''}${
+            d.link ? `\n   Link: ${cleanUrl(d.link)}` : ''
+          }${d.note ? `\n   Note: ${d.note}` : ''}`
+      )
+      .join('\n\n');
+
+    const msg = `📋 *OFFICE SAMAN ORDER DEMAND LIST*\n📅 Date: ${getTodayStr()}\n💰 *Kul Anumanit Kharcha: ₹${grandTotal.toLocaleString(
+      'en-IN'
+    )}*\n\n${text}\n\n_Bhejnewala: ${me?.email || 'Office'}_`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
   function handleDownloadPdf() {
     if (!pendingList.length) {
       toast('Download karne ke liye koi pending demand nahi hai.');
@@ -145,13 +165,21 @@ export function DemandList() {
           }
           .no-print { display: none !important; }
         }
+        @media screen {
+          #printable-demand-slip { display: none; }
+        }
       `}</style>
 
       <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
         <h2>🛒 Naya Saman Demand / Requisition</h2>
-        <button type="button" className="btn sm" onClick={handleDownloadPdf} style={{ background: '#2563eb', color: '#fff', border: 'none', fontWeight: 'bold', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}>
-          📥 Download PDF / Print
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button type="button" className="btn sm" onClick={handleDownloadPdf} style={{ background: '#2563eb', color: '#fff', border: 'none', fontWeight: 'bold', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer' }}>
+            📥 Download PDF / Print
+          </button>
+          <button type="button" className="btn primary sm" onClick={shareWhatsApp}>
+            📱 WhatsApp Share
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleAddDemand} className="no-print" style={{ background: 'var(--card-bg, #1e293b)', padding: '16px', borderRadius: '10px', marginBottom: '24px', border: '1px solid var(--border, #334155)' }}>
