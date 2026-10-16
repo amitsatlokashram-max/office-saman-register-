@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { useReg } from './context';
-import { today, inr } from '@/lib/calc';
+import { inr } from '@/lib/calc';
 
 export interface DemandItem {
   id: string;
@@ -16,6 +16,8 @@ export interface DemandItem {
   status: 'pending' | 'received';
   createdAt: string;
 }
+
+const getTodayStr = () => new Date().toISOString().slice(0, 10);
 
 export function DemandList() {
   const { toast, me } = useReg();
@@ -78,8 +80,8 @@ export function DemandList() {
         qty: d.qty,
         rate: d.rate || 0,
         total: d.qty * (d.rate || 0),
-        orderDate: d.createdAt.slice(0, 10) || today(),
-        receivedDate: today(),
+        orderDate: d.createdAt.slice(0, 10) || getTodayStr(),
+        receivedDate: getTodayStr(),
         vendor: d.link ? 'Online / Buy Link' : 'Market',
         broughtBy: me?.email || 'Office',
         note: `Demand list se auto-added. ${d.link ? 'Link: ' + d.link : ''} ${d.note ? 'Note: ' + d.note : ''}`.trim(),
