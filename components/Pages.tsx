@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import {
   MOVE,
   allIssues,
@@ -25,7 +26,11 @@ import { Icon } from './Icon';
 import { EmptyState, FiltersBar, NoRes, PageHead } from './PageParts';
 import { SettingsSections } from './Modals';
 import { useReg } from './context';
-import { DemandList } from './DemandList';
+
+const DemandListLazy = dynamic(() => import('./DemandList').then((m) => m.DemandList), {
+  ssr: false,
+  loading: () => <div style={{ padding: '20px', color: '#94a3b8' }}>Loading Demand List...</div>,
+});
 
 /* ====================== Saman ki list ====================== */
 function subLine(it: Item) {
@@ -627,7 +632,7 @@ export function DemandPage() {
   return (
     <>
       <PageHead title="Demand List / Orders" sub="Naya saman order requirement, WhatsApp slip aur stock conversion" print={false} add={false} />
-      <DemandList />
+      <DemandListLazy />
     </>
   );
 }
