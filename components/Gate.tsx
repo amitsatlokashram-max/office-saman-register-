@@ -30,7 +30,7 @@ export function Gate({
           <span className="brand-t">
             Office Register
             <br />
-            <span style={{ fontSize: '13px', color: '#818cf8', fontWeight: '600', display: 'block', marginTop: '2px' }}>
+            <span style={{ fontSize: '12px', color: '#818cf8', fontWeight: '600', display: 'block', marginTop: '2px' }}>
               - Amit Das
             </span>
           </span>
@@ -38,29 +38,32 @@ export function Gate({
         {kind === 'loading' && (
           <p className="gate-wait">
             <span className="spin" />
-            Register khul raha hai…
+            Khul raha hai…
           </p>
         )}
         {kind === 'setup' && (
           <>
-            <h2>Pehle Firebase jodo</h2>
+            <h2>Setup Firebase</h2>
             <p>
-              Is app ko chalane ke liye Vercel me (ya <code>.env.local</code> file me) apne Firebase project ki details daalni hai. Poora tareeka{' '}
-              <code>README.md</code> me step by step likha hai.
+              Environment variables configure karein.
             </p>
           </>
         )}
         {kind === 'login' && (
           <>
             <h2>Welcome 🙏</h2>
-            <p>Register kholne aur access karne ke liye apne Google account se sign in karein.</p>
+            <p style={{ margin: '6px 0 18px 0', fontSize: '13px', color: '#94a3b8' }}>
+              Access karne ke liye sign in karein.
+            </p>
             <button type="button" className="btn primary gbtn" id="signinBtn" onClick={() => onSignIn(remember)}>
-              Google se sign in karo
+              Google se Sign In
             </button>
-            <label className="check remember" htmlFor="g-remember">
-              <input type="checkbox" id="g-remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Is phone/computer pe login yaad rakho
+            <label className="check remember" htmlFor="g-remember" style={{ marginTop: '12px' }}>
+              <input type="checkbox" id="g-remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Login yaad rakho
             </label>
-            <p className="hint">Office ke saajhe computer pe tick mat karna. Bina tick ke, browser band karte hi logout ho jayega.</p>
+            <p className="hint" style={{ fontSize: '11px', color: '#64748b', marginTop: '8px' }}>
+              Shared PC pe check na karein.
+            </p>
           </>
         )}
         {kind === 'denied' && (
@@ -69,7 +72,7 @@ export function Gate({
               <Icon name="lock" />
             </div>
             <h2>Access Not Allowed 🔒</h2>
-            <p style={{ margin: '12px 0 20px 0', fontSize: '14px', color: '#94a3b8' }}>
+            <p style={{ margin: '10px 0 18px 0', fontSize: '13px', color: '#94a3b8' }}>
               Yeh account authorized nahi hai.
             </p>
             <div className="inrow" style={{ justifyContent: 'center' }}>
