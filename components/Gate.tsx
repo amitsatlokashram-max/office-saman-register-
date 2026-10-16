@@ -19,6 +19,7 @@ export function Gate({
 }) {
   const [remember, setRemember] = useState(false);
   useEffect(() => setRemember(rememberChoice()), []);
+
   return (
     <div className={'gate g-' + kind}>
       <div className="gate-card" id="gateCard">
@@ -27,9 +28,11 @@ export function Gate({
             <Icon name="boxFull" />
           </span>
           <span className="brand-t">
-            Office Saman
+            Office Register
             <br />
-            Register
+            <span style={{ fontSize: '13px', color: '#818cf8', fontWeight: '600', display: 'block', marginTop: '2px' }}>
+              - Amit Das
+            </span>
           </span>
         </div>
         {kind === 'loading' && (
@@ -49,29 +52,15 @@ export function Gate({
         )}
         {kind === 'login' && (
           <>
-            <h2>Sign in karke register kholo</h2>
-            <p>Sirf owner aur Team me jode gaye Gmail wale log andar aa sakte hai.</p>
-            <ul className="gate-points" aria-label="Register me kya hai">
-              <li>
-                <Icon name="list" />
-                Kya mangaya, kab aaya, kisne laya, kitne ka
-              </li>
-              <li>
-                <Icon name="users" />
-                Kisko diya, stock me kitna bacha
-              </li>
-              <li>
-                <Icon name="wallet" />
-                Mere paise, bill aur warranty
-              </li>
-            </ul>
+            <h2>Welcome 🙏</h2>
+            <p>Register kholne aur access karne ke liye apne Google account se sign in karein.</p>
             <button type="button" className="btn primary gbtn" id="signinBtn" onClick={() => onSignIn(remember)}>
               Google se sign in karo
             </button>
             <label className="check remember" htmlFor="g-remember">
               <input type="checkbox" id="g-remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Is phone/computer pe login yaad rakho
             </label>
-            <p className="hint">Office ke saajhe computer pe tick mat karna. Bina tick ke, browser band karte hi logout ho jayega aur agli baar dobara login maangega.</p>
+            <p className="hint">Office ke saajhe computer pe tick mat karna. Bina tick ke, browser band karte hi logout ho jayega.</p>
           </>
         )}
         {kind === 'denied' && (
