@@ -70,11 +70,11 @@ export function Gate({
             </div>
             <h2>Access Not Allowed 🔒</h2>
             <p style={{ margin: '12px 0 20px 0', fontSize: '14px', color: '#94a3b8' }}>
-              Aapka email <code>{email}</code> is portal par authorized nahi hai.
+              Yeh account authorized nahi hai.
             </p>
             <div className="inrow" style={{ justifyContent: 'center' }}>
               <button type="button" className="btn primary" onClick={onSignOut}>
-                Sign Out / Change Account
+                Sign Out
               </button>
             </div>
           </>
