@@ -18,6 +18,16 @@ export interface DemandItem {
 
 const getTodayStr = () => new Date().toISOString().slice(0, 10);
 
+function cleanUrl(url: string) {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    return u.origin + u.pathname;
+  } catch {
+    return url;
+  }
+}
+
 export function DemandList() {
   const { toast, me } = useReg();
   const [demands, setDemands] = useState<DemandItem[]>([]);
@@ -107,35 +117,44 @@ export function DemandList() {
 
   const pendingList = demands.filter((d) => d.status === 'pending');
   const receivedList = demands.filter((d) => d.status === 'received');
+  const grandTotal = pendingList.reduce((sum, d) => sum + d.qty * (d.rate || 0), 0);
 
-  function shareWhatsApp() {
+  function handleDownloadPdf() {
     if (!pendingList.length) {
-      toast('Koi pending demand nahi hai.');
+      toast('Download karne ke liye koi pending demand nahi hai.');
       return;
     }
-    const text = pendingList
-      .map(
-        (d, i) =>
-          `${i + 1}. *${d.item}*\n   ${d.qty} pcs${d.rate ? ` (Est. ₹${d.rate})` : ''}${
-            d.link ? `\n   Link: ${d.link}` : ''
-          }${d.note ? `\n   Note: ${d.note}` : ''}`
-      )
-      .join('\n\n');
-
-    const msg = `📋 *OFFICE SAMAN ORDER DEMAND LIST*\n\n${text}\n\n_Bhejnewala: ${me?.email || 'Office'}_`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    window.print();
   }
 
   return (
     <div style={{ padding: '16px', maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #printable-demand-slip, #printable-demand-slip * { visibility: visible; }
+          #printable-demand-slip {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            color: #000 !important;
+            background: #fff !important;
+            padding: 20px;
+            font-family: sans-serif;
+          }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
         <h2>🛒 Naya Saman Demand / Requisition</h2>
-        <button type="button" className="btn primary sm" onClick={shareWhatsApp}>
-          📱 WhatsApp Par Share Karo
+        <button type="button" className="btn sm" onClick={handleDownloadPdf} style={{ background: '#2563eb', color: '#fff', border: 'none', fontWeight: 'bold', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}>
+          📥 Download PDF / Print
         </button>
       </div>
 
-      <form onSubmit={handleAddDemand} style={{ background: 'var(--card-bg, #1e293b)', padding: '16px', borderRadius: '10px', marginBottom: '24px', border: '1px solid var(--border, #334155)' }}>
+      <form onSubmit={handleAddDemand} className="no-print" style={{ background: 'var(--card-bg, #1e293b)', padding: '16px', borderRadius: '10px', marginBottom: '24px', border: '1px solid var(--border, #334155)' }}>
         <h3 style={{ marginBottom: '12px', fontSize: '15px' }}>Naye Saman ki Demand List Jodein</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '12px' }}>
           <input type="text" placeholder="Saman ka Naam *" value={item} onChange={(e) => setItem(e.target.value)} required style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' }} />
@@ -149,11 +168,58 @@ export function DemandList() {
         </button>
       </form>
 
-      <h3 style={{ marginBottom: '10px' }}>Mangwaya Jane Wala Saman ({pendingList.length})</h3>
+      {/* Downloadable / Printable PDF Slip Layout */}
+      <div id="printable-demand-slip">
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '15px' }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '20px', color: '#000' }}>OFFICE SAMAN REQUISITION SLIP</h1>
+            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#555' }}>Demand List for Purchase</p>
+          </div>
+          <div style={{ textAlign: 'right', fontSize: '12px', color: '#000' }}>
+            <div><strong>Date:</strong> {getTodayStr()}</div>
+            <div><strong>By:</strong> {me?.email || 'Office'}</div>
+          </div>
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '15px', fontSize: '12px', color: '#000' }}>
+          <thead>
+            <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #000' }}>
+              <th style={{ padding: '6px', textAlign: 'left' }}>S.No</th>
+              <th style={{ padding: '6px', textAlign: 'left' }}>Item Name</th>
+              <th style={{ padding: '6px', textAlign: 'center' }}>Qty</th>
+              <th style={{ padding: '6px', textAlign: 'right' }}>Est. Rate</th>
+              <th style={{ padding: '6px', textAlign: 'right' }}>Total Est.</th>
+              <th style={{ padding: '6px', textAlign: 'left' }}>Details / Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingList.map((d, index) => (
+              <tr key={d.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
+                <td style={{ padding: '6px' }}>{index + 1}</td>
+                <td style={{ padding: '6px' }}><strong>{d.item}</strong></td>
+                <td style={{ padding: '6px', textAlign: 'center' }}>{d.qty}</td>
+                <td style={{ padding: '6px', textAlign: 'right' }}>{d.rate ? `₹${d.rate}` : '—'}</td>
+                <td style={{ padding: '6px', textAlign: 'right' }}>{d.rate ? `₹${d.rate * d.qty}` : '—'}</td>
+                <td style={{ padding: '6px', fontSize: '10px', color: '#334155' }}>
+                  {d.note ? d.note + ' ' : ''}{d.link ? `(${cleanUrl(d.link)})` : ''}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {grandTotal > 0 && (
+          <div style={{ textAlign: 'right', fontSize: '14px', fontWeight: 'bold', borderTop: '2px solid #000', paddingTop: '6px', color: '#000' }}>
+            Kul Anumanit Kharcha: ₹{grandTotal.toLocaleString('en-IN')}
+          </div>
+        )}
+      </div>
+
+      <h3 className="no-print" style={{ marginBottom: '10px' }}>Mangwaya Jane Wala Saman ({pendingList.length})</h3>
       {pendingList.length === 0 ? (
-        <p className="muted" style={{ marginBottom: '24px' }}>Abhi koi pending demand nahi hai.</p>
+        <p className="muted no-print" style={{ marginBottom: '24px' }}>Abhi koi pending demand nahi hai.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+        <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
           {pendingList.map((d) => (
             <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--card-bg, #1e293b)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border, #334155)', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ flex: 1, minWidth: '200px' }}>
@@ -177,7 +243,7 @@ export function DemandList() {
       )}
 
       {receivedList.length > 0 && (
-        <details style={{ marginTop: '20px' }}>
+        <details className="no-print" style={{ marginTop: '20px' }}>
           <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#94a3b8' }}>Pehle Mangwaya Gaya Saman ({receivedList.length})</summary>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
             {receivedList.map((d) => (
