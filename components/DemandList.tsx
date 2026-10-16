@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { useReg } from './context';
 import { inr } from '@/lib/calc';
 
@@ -30,14 +29,19 @@ export function DemandList() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const db = getFirestore();
     const q = query(collection(db, 'demands'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snapshot) => {
-      const list: DemandItem[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push({ id: docSnap.id, ...docSnap.data() } as DemandItem);
-      });
-      setDemands(list);
-    });
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const list: DemandItem[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() } as DemandItem);
+        });
+        setDemands(list);
+      },
+      () => {}
+    );
     return () => unsub();
   }, []);
 
@@ -49,6 +53,7 @@ export function DemandList() {
     }
     setLoading(true);
     try {
+      const db = getFirestore();
       await addDoc(collection(db, 'demands'), {
         item: item.trim(),
         qty: Number(qty) || 1,
@@ -74,6 +79,7 @@ export function DemandList() {
 
   async function handleReceiveDemand(d: DemandItem) {
     try {
+      const db = getFirestore();
       await addDoc(collection(db, 'purchases'), {
         item: d.item,
         category: 'General',
