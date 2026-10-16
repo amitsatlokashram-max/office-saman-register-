@@ -138,6 +138,14 @@ export async function signInGoogle(remember: boolean): Promise<void> {
     /* purana browser: jo chal raha hai wahi */
   }
   markSignIn(remember);
+
+  // Phone check: mobile pe bina pop-up direct redirect se login hoga
+  const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    await signInWithRedirect(fbAuth(), p);
+    return;
+  }
+
   try {
     await signInWithPopup(fbAuth(), p);
   } catch (e) {
