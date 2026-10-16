@@ -161,7 +161,7 @@ export function DemandList() {
             color: #000 !important;
             background: #fff !important;
             padding: 20px;
-            font-family: sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
           }
           .no-print { display: none !important; }
         }
@@ -196,7 +196,7 @@ export function DemandList() {
         </button>
       </form>
 
-      {/* Downloadable / Printable PDF Slip Layout */}
+      {/* Printable PDF Slip Layout */}
       <div id="printable-demand-slip">
         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '15px' }}>
           <div>
@@ -211,25 +211,52 @@ export function DemandList() {
 
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '15px', fontSize: '12px', color: '#000' }}>
           <thead>
-            <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #000' }}>
-              <th style={{ padding: '6px', textAlign: 'left' }}>S.No</th>
-              <th style={{ padding: '6px', textAlign: 'left' }}>Item Name</th>
-              <th style={{ padding: '6px', textAlign: 'center' }}>Qty</th>
-              <th style={{ padding: '6px', textAlign: 'right' }}>Est. Rate</th>
-              <th style={{ padding: '6px', textAlign: 'right' }}>Total Est.</th>
-              <th style={{ padding: '6px', textAlign: 'left' }}>Details / Link</th>
+            <tr style={{ background: '#f1f5f9', borderBottom: '1.5px solid #000' }}>
+              <th style={{ padding: '8px 6px', textAlign: 'left', width: '35px' }}>S.No</th>
+              <th style={{ padding: '8px 6px', textAlign: 'left' }}>Item Name</th>
+              <th style={{ padding: '8px 6px', textAlign: 'center', width: '45px' }}>Qty</th>
+              <th style={{ padding: '8px 6px', textAlign: 'right', width: '80px' }}>Est. Rate</th>
+              <th style={{ padding: '8px 6px', textAlign: 'right', width: '90px' }}>Total Est.</th>
+              <th style={{ padding: '8px 6px', textAlign: 'left' }}>Details & Buy Link</th>
             </tr>
           </thead>
           <tbody>
             {pendingList.map((d, index) => (
-              <tr key={d.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ padding: '6px' }}>{index + 1}</td>
-                <td style={{ padding: '6px' }}><strong>{d.item}</strong></td>
-                <td style={{ padding: '6px', textAlign: 'center' }}>{d.qty}</td>
-                <td style={{ padding: '6px', textAlign: 'right' }}>{d.rate ? `₹${d.rate}` : '—'}</td>
-                <td style={{ padding: '6px', textAlign: 'right' }}>{d.rate ? `₹${d.rate * d.qty}` : '—'}</td>
-                <td style={{ padding: '6px', fontSize: '10px', color: '#334155' }}>
-                  {d.note ? d.note + ' ' : ''}{d.link ? `(${cleanUrl(d.link)})` : ''}
+              <tr key={d.id} style={{ borderBottom: '1px solid #cbd5e1', verticalAlign: 'top' }}>
+                <td style={{ padding: '8px 6px' }}>{index + 1}</td>
+                <td style={{ padding: '8px 6px' }}><strong>{d.item}</strong></td>
+                <td style={{ padding: '8px 6px', textAlign: 'center' }}>{d.qty}</td>
+                <td style={{ padding: '8px 6px', textAlign: 'right' }}>{d.rate ? `₹${d.rate}` : '—'}</td>
+                <td style={{ padding: '8px 6px', textAlign: 'right' }}>{d.rate ? `₹${d.rate * d.qty}` : '—'}</td>
+                <td style={{ padding: '8px 6px' }}>
+                  {d.note && (
+                    <div style={{ fontSize: '11px', color: '#1e293b', marginBottom: d.link ? '4px' : '0' }}>
+                      {d.note}
+                    </div>
+                  )}
+                  {d.link ? (
+                    <a
+                      href={d.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'block',
+                        color: '#1d4ed8',
+                        fontSize: '9.5px',
+                        textDecoration: 'underline',
+                        wordBreak: 'break-all',
+                        background: '#eff6ff',
+                        padding: '4px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid #bfdbfe',
+                        marginTop: '2px'
+                      }}
+                    >
+                      🔗 {cleanUrl(d.link)}
+                    </a>
+                  ) : (
+                    !d.note && <span style={{ color: '#94a3b8', fontSize: '11px' }}>—</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -237,7 +264,7 @@ export function DemandList() {
         </table>
 
         {grandTotal > 0 && (
-          <div style={{ textAlign: 'right', fontSize: '14px', fontWeight: 'bold', borderTop: '2px solid #000', paddingTop: '6px', color: '#000' }}>
+          <div style={{ textAlign: 'right', fontSize: '14px', fontWeight: 'bold', borderTop: '2px solid #000', paddingTop: '8px', color: '#000' }}>
             Kul Anumanit Kharcha: ₹{grandTotal.toLocaleString('en-IN')}
           </div>
         )}
