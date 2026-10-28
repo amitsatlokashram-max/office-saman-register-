@@ -67,26 +67,16 @@ function TRow({
       <td className="c-no">
         {String(no).padStart(3, '0')}
       </td>
-
       <td className="c-item">
         <button type="button" className="rowlink">
           {it.item || '(bina naam)'}
         </button>
         {sub && <small>{sub}</small>}
       </td>
-
       <td className="num">{num(it.qty)}</td>
-
-      <td className="num">
-        {num(it.rate) ? inr(it.rate) : '—'}
-      </td>
-
+      <td className="num">{num(it.rate) ? inr(it.rate) : '—'}</td>
       <td className="num c-total">{inr(it.total)}</td>
-
-      <td className="nowrap">
-        {fdate(it.orderDate) || '—'}
-      </td>
-
+      <td className="nowrap">{fdate(it.orderDate) || '—'}</td>
       <td className="nowrap">
         {it.receivedDate ? (
           fdate(it.receivedDate)
@@ -94,17 +84,13 @@ function TRow({
           <em className="pend">Abhi nahi</em>
         )}
       </td>
-
       <td className="c-src">
         {it.vendor || '—'}
         {it.broughtBy && <small>{it.broughtBy}</small>}
       </td>
-
       <td>
         <span className="pills">
-          <span className={'stamp ' + st.cls}>
-            {st.label}
-          </span>
+          <span className={'stamp ' + st.cls}>{st.label}</span>
           {mp.due > 0 && (
             <span className="stamp low">
               Mere {inr(mp.due)} baaki
@@ -112,7 +98,6 @@ function TRow({
           )}
         </span>
       </td>
-
       <td
         className="c-bill"
         title={nb ? nb + ' bill lage hai' : 'Bill nahi laga'}
@@ -159,9 +144,7 @@ function Card({
               {sub ? ' · ' + sub : ''}
             </small>
           </span>
-          <span className={'stamp ' + st.cls}>
-            {st.label}
-          </span>
+          <span className={'stamp ' + st.cls}>{st.label}</span>
         </span>
 
         <span className="lc-mid">
@@ -177,7 +160,6 @@ function Card({
             <Icon name="cal" />
             {fdate(it.orderDate) || '—'}
           </span>
-
           <span>
             <Icon name="truck" />
             {it.receivedDate ? (
@@ -186,13 +168,11 @@ function Card({
               <em className="pend">Abhi nahi aaya</em>
             )}
           </span>
-
           {(it.vendor || it.broughtBy) && (
             <span className="lc-src">
               {[it.vendor, it.broughtBy].filter(Boolean).join(', ')}
             </span>
           )}
-
           {nb > 0 && (
             <span>
               <Icon name="clip" />
@@ -220,13 +200,28 @@ export function SamanPage() {
     newEntry,
   } = useReg();
 
-  // IMPORTANT:
-  // Existing filters and sorting are preserved.
-  // Do not force newestFirst here.
-  const list = filteredItems(items, f, 'items');
+  // Pehle existing search, month, vendor aur status
+  // filters apply honge.
+  const filtered = filteredItems(items, f, 'items');
 
-  // Display-only serial numbers follow the visible order.
-  // No Firebase IDs or stored data are changed.
+  // Ab Pahuncha (Received Date) ke hisaab se
+  // sabse nayi received date sabse upar.
+  // Jiska saman nahi aaya, wo sabse neeche.
+  const list = [...filtered].sort((a, b) => {
+    const aDate = a.receivedDate || '';
+    const bDate = b.receivedDate || '';
+
+    if (!aDate && bDate) return 1;
+    if (aDate && !bDate) return -1;
+
+    const dateCompare = bDate.localeCompare(aDate);
+    if (dateCompare !== 0) return dateCompare;
+
+    // Same received date par original filtered order.
+    return 0;
+  });
+
+  // Display serial numbers, Firebase IDs nahi badlenge.
   const getSerial = (index: number) => list.length - index;
 
   const pcs = list.reduce(
@@ -267,9 +262,7 @@ export function SamanPage() {
                 </span>
                 <span className="sum-tot">
                   Kul jod{' '}
-                  <strong id="list-total">
-                    {inr(total)}
-                  </strong>
+                  <strong id="list-total">{inr(total)}</strong>
                 </span>
               </div>
 
@@ -431,13 +424,11 @@ export function StockPage() {
           <span>
             <b>{gs.length}</b> tarah ka saman
           </span>
-
           {lowN > 0 && (
             <span className="sum-low">
               <b>{lowN}</b> kam stock me
             </span>
           )}
-
           <span className="sum-tot">
             Stock me kul <strong>{pcs} pcs</strong>
           </span>
@@ -477,14 +468,12 @@ export function StockPage() {
                       ].filter(Boolean).join(' · ')}
                     </small>
                   </td>
-
                   <td className="num">{g.aaya}</td>
                   <td className="num">{g.rasta || '—'}</td>
                   <td className="num">{g.diya}</td>
                   <td className="num">{g.wapas || '—'}</td>
                   <td className="num">{g.kharab || '—'}</td>
                   <td className="num bacha">{g.bacha}</td>
-
                   <td className="no-print">
                     <MinInput
                       key={g.key + ':' + g.min}
@@ -492,13 +481,11 @@ export function StockPage() {
                       onSave={saveMin}
                     />
                   </td>
-
                   <td>
                     <span className={'stamp ' + g.st.cls}>
                       {g.st.label}
                     </span>
                   </td>
-
                   <td className="no-print">
                     <button
                       className="btn sm ghost"
@@ -526,9 +513,7 @@ export function StockPage() {
         csv="stock"
         tab="stock"
       />
-
       {items.length > 0 && <FiltersBar tab="stock" />}
-
       {body}
     </>
   );
@@ -550,7 +535,6 @@ export function IssuesPage() {
   const mvAll = allMoves(items);
   const list = filteredIssues(items, f);
   const mv = filterLog(mvAll, f);
-
   const pcs = list.reduce((s, i) => s + i.qty, 0);
   const val = list.reduce((s, i) => s + i.qty * i.rate, 0);
   const showMoves = mv.length > 0 && !f.dept;
@@ -653,7 +637,6 @@ export function IssuesPage() {
                     <th className="pcol">Sign</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {list.map((i) => (
                     <tr key={i.itemId + i.id}>
@@ -705,7 +688,6 @@ export function IssuesPage() {
             <h2 className="sub-h">
               Wapas aaya, kharab, return
             </h2>
-
             <div className="tcard tscroll">
               <table className="itable">
                 <thead>
@@ -718,7 +700,6 @@ export function IssuesPage() {
                     <th>Note</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {mv.map((m) => (
                     <tr key={m.itemId + m.id}>
@@ -772,12 +753,10 @@ export function IssuesPage() {
         csv="issues"
         tab="issues"
       />
-
       {items.length > 0 &&
         (all.length > 0 || mvAll.length > 0) && (
           <FiltersBar tab="issues" />
         )}
-
       {body}
     </>
   );
@@ -808,10 +787,7 @@ function Block({
   tone?: 'gold' | 'red';
 }) {
   const max = Math.max(1, ...rows.map((r) => r.amt));
-
-  let body: ReactNode = (
-    <p className="none">Abhi kuch nahi.</p>
-  );
+  let body: ReactNode = <p className="none">Abhi kuch nahi.</p>;
 
   if (rows.length) {
     body = (
@@ -827,7 +803,6 @@ function Block({
               </th>
             </tr>
           </thead>
-
           <tbody>
             {rows.map((r, i) => {
               const w =
@@ -883,13 +858,11 @@ export function HisaabPage() {
         pcs: 0,
         amt: 0,
       };
-
       r.n++;
       r.pcs += num(it.qty);
       r.amt += num(it.total);
       m.set(k, r);
     }
-
     return Array.from(m.values());
   };
 
@@ -918,7 +891,6 @@ export function HisaabPage() {
         pcs: 0,
         amt: 0,
       };
-
       r.pcs += num(is.qty);
       r.amt += num(is.qty) * num(it.rate);
       dm.set(k, r);
@@ -937,11 +909,9 @@ export function HisaabPage() {
   for (const it of list) {
     const m = myPay(it);
     if (!m.mine) continue;
-
     nP++;
     myP += m.paid;
     myB += m.back;
-
     if (m.back > 0) nB++;
     if (m.due > 0) nD++;
   }
@@ -972,14 +942,11 @@ export function HisaabPage() {
   const dueRows: BRow[] = list
     .map((it) => {
       const m = myPay(it);
-
       return m.due > 0
         ? {
             name:
               it.item +
-              (it.orderDate
-                ? ' · ' + fdate(it.orderDate)
-                : ''),
+              (it.orderDate ? ' · ' + fdate(it.orderDate) : ''),
             n: 1,
             pcs: num(it.qty),
             amt: m.due,
@@ -1008,11 +975,9 @@ export function HisaabPage() {
             <span>
               <b>{list.length}</b> entries ka kul kharcha
             </span>
-
             {filtersActive(f, 'summary') && (
               <span className="muted">filter laga hai</span>
             )}
-
             <span className="sum-tot">
               <strong>{inr(sumTotal(list))}</strong>
             </span>
@@ -1027,7 +992,6 @@ export function HisaabPage() {
               countKey="n"
               tone="gold"
             />
-
             <Block
               title="Kahan se mangaya"
               note="Har dukaan ya site se kitne ka saman aaya"
@@ -1035,7 +999,6 @@ export function HisaabPage() {
               cols={['Dukaan / site', 'Entries']}
               countKey="n"
             />
-
             <Block
               title="Kis tarah ka saman"
               note="Category ke hisaab se kharcha"
@@ -1043,7 +1006,6 @@ export function HisaabPage() {
               cols={['Saman', 'Pcs']}
               countKey="pcs"
             />
-
             <Block
               title="Department ko kitna diya"
               note="Jitne piece diye, unki keemat rate ke hisaab se"
@@ -1051,7 +1013,6 @@ export function HisaabPage() {
               cols={['Department', 'Pcs']}
               countKey="pcs"
             />
-
             <Block
               title="Mera paisa"
               note="Jo aapne apni jeb se diye, kitne wapas mile, kitne baaki"
@@ -1060,7 +1021,6 @@ export function HisaabPage() {
               countKey="n"
               tone="gold"
             />
-
             <Block
               title="Kis saman ke mere paise baaki"
               note="Jin entries ke paise abhi wapas milne hai"
