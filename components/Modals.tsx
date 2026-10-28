@@ -21,6 +21,7 @@ import {
 } from './IssueRows';
 import { Icon } from './Icon';
 import { useReg, useSave } from './context';
+import { ImportOldData } from './ImportOldData';
 
 function Head({
   title, sub, id, onClose,
@@ -100,7 +101,6 @@ function IssueForm({
     setErr(null);
 
     const cur = getItem(itemId);
-
     if (!cur) {
       return setErr({ msg: 'Ye entry ab nahi hai.' });
     }
@@ -182,9 +182,7 @@ function IssueForm({
           badKey={err?.key}
         />
 
-        {err && (
-          <p className="ferr">{err.msg}</p>
-        )}
+        {err && <p className="ferr">{err.msg}</p>}
 
         <div className="fgrid">
           <div className="field">
@@ -370,9 +368,11 @@ function MoveForm({
               <option value="back">
                 Kisi ne wapas kiya (stock me wapas aaya)
               </option>
+
               <option value="damaged">
                 Kharab ho gaya
               </option>
+
               <option value="vendor">
                 Dukaan ko wapas bheja (return)
               </option>
@@ -687,7 +687,7 @@ function aiText(ai: AiStatus): string {
   );
 }
 
-/* ---------- NEW APPEARANCE & THEME ---------- */
+/* ---------- APPEARANCE & THEME ---------- */
 
 type DisplayMode = 'dark' | 'light';
 
@@ -705,41 +705,13 @@ const themeColors: {
   label: string;
   hex: string;
 }[] = [
-  {
-    id: 'purple',
-    label: 'Purple',
-    hex: '#6366F1',
-  },
-  {
-    id: 'blue',
-    label: 'Blue',
-    hex: '#2563EB',
-  },
-  {
-    id: 'green',
-    label: 'Green',
-    hex: '#16A34A',
-  },
-  {
-    id: 'red',
-    label: 'Red',
-    hex: '#DC2626',
-  },
-  {
-    id: 'orange',
-    label: 'Orange',
-    hex: '#EA580C',
-  },
-  {
-    id: 'pink',
-    label: 'Pink',
-    hex: '#DB2777',
-  },
-  {
-    id: 'cyan',
-    label: 'Cyan',
-    hex: '#0891B2',
-  },
+  { id: 'purple', label: 'Purple', hex: '#6366F1' },
+  { id: 'blue', label: 'Blue', hex: '#2563EB' },
+  { id: 'green', label: 'Green', hex: '#16A34A' },
+  { id: 'red', label: 'Red', hex: '#DC2626' },
+  { id: 'orange', label: 'Orange', hex: '#EA580C' },
+  { id: 'pink', label: 'Pink', hex: '#DB2777' },
+  { id: 'cyan', label: 'Cyan', hex: '#0891B2' },
 ];
 
 function ThemeSection() {
@@ -1078,8 +1050,10 @@ export function SettingsSections() {
 
       <GoogleSection google={google} />
 
-      {/* NEW DARK / LIGHT & COLOR THEME */}
       <ThemeSection />
+
+      {/* NEW: Excel Import */}
+      <ImportOldData />
     </form>
   );
 }
