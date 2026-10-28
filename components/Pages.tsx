@@ -23,12 +23,7 @@ import {
 } from '@/lib/calc';
 import type { Item, StockGroup } from '@/lib/types';
 import { Icon } from './Icon';
-import {
-  EmptyState,
-  FiltersBar,
-  NoRes,
-  PageHead,
-} from './PageParts';
+import { EmptyState, FiltersBar, NoRes, PageHead } from './PageParts';
 import { SettingsSections } from './Modals';
 import { useReg } from './context';
 
@@ -44,31 +39,13 @@ const DemandListLazy = dynamic(
   },
 );
 
-/* ====================== Sorting ====================== */
-
-function createdTime(item: Item): number {
-  const time = Date.parse(item.createdAt || '');
-  return Number.isFinite(time) ? time : 0;
-}
-
-function newestFirst(a: Item, b: Item): number {
-  const diff = createdTime(b) - createdTime(a);
-
-  if (diff !== 0) return diff;
-
-  // Stable fallback, without changing Firebase IDs.
-  return b.id.localeCompare(a.id);
-}
-
 /* ====================== Saman ki list ====================== */
 
 function subLine(it: Item) {
   return [
     it.category,
     it.billNo ? 'Bill: ' + it.billNo : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  ].filter(Boolean).join(' · ');
 }
 
 function TRow({
@@ -86,10 +63,7 @@ function TRow({
   const sub = subLine(it);
 
   return (
-    <tr
-      className="row"
-      onClick={() => onOpen(it.id)}
-    >
+    <tr className="row" onClick={() => onOpen(it.id)}>
       <td className="c-no">
         {String(no).padStart(3, '0')}
       </td>
@@ -98,7 +72,6 @@ function TRow({
         <button type="button" className="rowlink">
           {it.item || '(bina naam)'}
         </button>
-
         {sub && <small>{sub}</small>}
       </td>
 
@@ -108,9 +81,7 @@ function TRow({
         {num(it.rate) ? inr(it.rate) : '—'}
       </td>
 
-      <td className="num c-total">
-        {inr(it.total)}
-      </td>
+      <td className="num c-total">{inr(it.total)}</td>
 
       <td className="nowrap">
         {fdate(it.orderDate) || '—'}
@@ -126,10 +97,7 @@ function TRow({
 
       <td className="c-src">
         {it.vendor || '—'}
-
-        {it.broughtBy && (
-          <small>{it.broughtBy}</small>
-        )}
+        {it.broughtBy && <small>{it.broughtBy}</small>}
       </td>
 
       <td>
@@ -137,7 +105,6 @@ function TRow({
           <span className={'stamp ' + st.cls}>
             {st.label}
           </span>
-
           {mp.due > 0 && (
             <span className="stamp low">
               Mere {inr(mp.due)} baaki
@@ -148,11 +115,7 @@ function TRow({
 
       <td
         className="c-bill"
-        title={
-          nb
-            ? nb + ' bill lage hai'
-            : 'Bill nahi laga'
-        }
+        title={nb ? nb + ' bill lage hai' : 'Bill nahi laga'}
       >
         {nb > 0 ? (
           <>
@@ -190,16 +153,12 @@ function Card({
       >
         <span className="lc-top">
           <span className="lc-name">
-            <strong>
-              {it.item || '(bina naam)'}
-            </strong>
-
+            <strong>{it.item || '(bina naam)'}</strong>
             <small>
               #{String(no).padStart(3, '0')}
               {sub ? ' · ' + sub : ''}
             </small>
           </span>
-
           <span className={'stamp ' + st.cls}>
             {st.label}
           </span>
@@ -208,14 +167,9 @@ function Card({
         <span className="lc-mid">
           <span className="lc-eq">
             {num(it.qty)} pcs ×{' '}
-            {num(it.rate)
-              ? inr(it.rate)
-              : '—'}
+            {num(it.rate) ? inr(it.rate) : '—'}
           </span>
-
-          <span className="lc-tot">
-            {inr(it.total)}
-          </span>
+          <span className="lc-tot">{inr(it.total)}</span>
         </span>
 
         <span className="lc-bot">
@@ -226,21 +180,16 @@ function Card({
 
           <span>
             <Icon name="truck" />
-
             {it.receivedDate ? (
               fdate(it.receivedDate)
             ) : (
-              <em className="pend">
-                Abhi nahi aaya
-              </em>
+              <em className="pend">Abhi nahi aaya</em>
             )}
           </span>
 
           {(it.vendor || it.broughtBy) && (
             <span className="lc-src">
-              {[it.vendor, it.broughtBy]
-                .filter(Boolean)
-                .join(', ')}
+              {[it.vendor, it.broughtBy].filter(Boolean).join(', ')}
             </span>
           )}
 
@@ -271,32 +220,14 @@ export function SamanPage() {
     newEntry,
   } = useReg();
 
-  /*
-   * Display numbers are based on creation order.
-   * Latest added item gets highest number.
-   * Firebase document IDs remain unchanged.
-   */
-  const orderedItems = [...items].sort(newestFirst);
+  // IMPORTANT:
+  // Existing filters and sorting are preserved.
+  // Do not force newestFirst here.
+  const list = filteredItems(items, f, 'items');
 
-  const nos: Record<string, number> = {};
-
-  orderedItems.forEach((item, index) => {
-    nos[item.id] = orderedItems.length - index;
-  });
-
-  /*
-   * Preserve existing search, month, vendor
-   * and status filters.
-   *
-   * Display latest-created items first.
-   */
-  const filtered = filteredItems(
-    items,
-    f,
-    'items',
-  );
-
-  const list = [...filtered].sort(newestFirst);
+  // Display-only serial numbers follow the visible order.
+  // No Firebase IDs or stored data are changed.
+  const getSerial = (index: number) => list.length - index;
 
   const pcs = list.reduce(
     (sum, item) => sum + num(item.qty),
@@ -327,18 +258,13 @@ export function SamanPage() {
             />
           ) : (
             <>
-              <div
-                className="sumbar"
-                aria-live="polite"
-              >
+              <div className="sumbar" aria-live="polite">
                 <span>
                   <b>{list.length}</b> entries
                 </span>
-
                 <span>
                   <b>{pcs}</b> pcs
                 </span>
-
                 <span className="sum-tot">
                   Kul jod{' '}
                   <strong id="list-total">
@@ -353,35 +279,25 @@ export function SamanPage() {
                     <tr>
                       <th>#</th>
                       <th>Saman</th>
-                      <th className="num">
-                        Pcs
-                      </th>
-                      <th className="num">
-                        Rate
-                      </th>
-                      <th className="num">
-                        Total
-                      </th>
+                      <th className="num">Pcs</th>
+                      <th className="num">Rate</th>
+                      <th className="num">Total</th>
                       <th>Mangaya</th>
                       <th>Pahuncha</th>
-                      <th>
-                        Kahan se / Kisne laya
-                      </th>
+                      <th>Kahan se / Kisne laya</th>
                       <th>Status</th>
                       <th className="c-bill">
-                        <span className="sr">
-                          Bill
-                        </span>
+                        <span className="sr">Bill</span>
                       </th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {list.map((it) => (
+                    {list.map((it, index) => (
                       <TRow
                         key={it.id}
                         it={it}
-                        no={nos[it.id]}
+                        no={getSerial(index)}
                         onOpen={openEntry}
                       />
                     ))}
@@ -389,20 +305,10 @@ export function SamanPage() {
 
                   <tfoot>
                     <tr>
-                      <td colSpan={2}>
-                        {list.length} entries
-                      </td>
-
-                      <td className="num">
-                        {pcs}
-                      </td>
-
+                      <td colSpan={2}>{list.length} entries</td>
+                      <td className="num">{pcs}</td>
                       <td />
-
-                      <td className="num">
-                        {inr(total)}
-                      </td>
-
+                      <td className="num">{inr(total)}</td>
                       <td colSpan={5} />
                     </tr>
                   </tfoot>
@@ -410,11 +316,11 @@ export function SamanPage() {
               </div>
 
               <ul className="lcards">
-                {list.map((it) => (
+                {list.map((it, index) => (
                   <Card
                     key={it.id}
                     it={it}
-                    no={nos[it.id]}
+                    no={getSerial(index)}
                     onOpen={openEntry}
                   />
                 ))}
@@ -441,14 +347,8 @@ function MinInput({
   );
 
   const commit = () => {
-    const n = Math.max(
-      0,
-      Math.round(num(val)),
-    );
-
-    if (n !== g.min) {
-      onSave(g.key, n);
-    }
+    const n = Math.max(0, Math.round(num(val)));
+    if (n !== g.min) onSave(g.key, n);
   };
 
   return (
@@ -460,18 +360,12 @@ function MinInput({
       className="mininp"
       value={val}
       placeholder="—"
-      aria-label={
-        'Kam se kam stock: ' + g.name
-      }
-      onChange={(e) =>
-        setVal(e.target.value)
-      }
+      aria-label={'Kam se kam stock: ' + g.name}
+      onChange={(e) => setVal(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
-          (
-            e.target as HTMLInputElement
-          ).blur();
+          (e.target as HTMLInputElement).blur();
         }
       }}
     />
@@ -490,7 +384,6 @@ export function StockPage() {
   } = useReg();
 
   let gs = groups.slice();
-
   const q = f.q.trim().toLowerCase();
 
   if (q) {
@@ -504,35 +397,22 @@ export function StockPage() {
   if (f.stock === 'low') {
     gs = gs.filter((g) => g.low);
   } else if (f.stock === 'out') {
-    gs = gs.filter(
-      (g) =>
-        g.aaya > 0 &&
-        g.bacha === 0,
-    );
+    gs = gs.filter((g) => g.aaya > 0 && g.bacha === 0);
   }
 
   gs.sort(
     (a, b) =>
-      Number(b.low) -
-        Number(a.low) ||
+      Number(b.low) - Number(a.low) ||
       a.name.localeCompare(b.name),
   );
 
-  const pcs = gs.reduce(
-    (s, g) => s + g.bacha,
-    0,
-  );
-
-  const lowN = groups.filter(
-    (g) => g.low,
-  ).length;
+  const pcs = gs.reduce((s, g) => s + g.bacha, 0);
+  const lowN = groups.filter((g) => g.low).length;
 
   let body: ReactNode;
 
   if (!items.length) {
-    body = (
-      <EmptyState onNew={newEntry} />
-    );
+    body = <EmptyState onNew={newEntry} />;
   } else if (!gs.length) {
     body = (
       <NoRes
@@ -559,8 +439,7 @@ export function StockPage() {
           )}
 
           <span className="sum-tot">
-            Stock me kul{' '}
-            <strong>{pcs} pcs</strong>
+            Stock me kul <strong>{pcs} pcs</strong>
           </span>
         </div>
 
@@ -569,32 +448,16 @@ export function StockPage() {
             <thead>
               <tr>
                 <th>Saman</th>
-                <th className="num">
-                  Kul aaya
-                </th>
-                <th className="num">
-                  Rasta me
-                </th>
-                <th className="num">
-                  Diya
-                </th>
-                <th className="num">
-                  Wapas
-                </th>
-                <th className="num">
-                  Kharab / return
-                </th>
-                <th className="num">
-                  Bacha
-                </th>
-                <th className="no-print">
-                  Kam se kam
-                </th>
+                <th className="num">Kul aaya</th>
+                <th className="num">Rasta me</th>
+                <th className="num">Diya</th>
+                <th className="num">Wapas</th>
+                <th className="num">Kharab / return</th>
+                <th className="num">Bacha</th>
+                <th className="no-print">Kam se kam</th>
                 <th>Status</th>
                 <th className="no-print">
-                  <span className="sr">
-                    Entries
-                  </span>
+                  <span className="sr">Entries</span>
                 </th>
               </tr>
             </thead>
@@ -603,48 +466,24 @@ export function StockPage() {
               {gs.map((g) => (
                 <tr
                   key={g.key}
-                  className={
-                    g.low
-                      ? 'lowrow'
-                      : undefined
-                  }
+                  className={g.low ? 'lowrow' : undefined}
                 >
                   <td>
                     <strong>{g.name}</strong>
-
                     <small>
                       {[
                         g.category,
                         g.entries + ' entries',
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
+                      ].filter(Boolean).join(' · ')}
                     </small>
                   </td>
 
-                  <td className="num">
-                    {g.aaya}
-                  </td>
-
-                  <td className="num">
-                    {g.rasta || '—'}
-                  </td>
-
-                  <td className="num">
-                    {g.diya}
-                  </td>
-
-                  <td className="num">
-                    {g.wapas || '—'}
-                  </td>
-
-                  <td className="num">
-                    {g.kharab || '—'}
-                  </td>
-
-                  <td className="num bacha">
-                    {g.bacha}
-                  </td>
+                  <td className="num">{g.aaya}</td>
+                  <td className="num">{g.rasta || '—'}</td>
+                  <td className="num">{g.diya}</td>
+                  <td className="num">{g.wapas || '—'}</td>
+                  <td className="num">{g.kharab || '—'}</td>
+                  <td className="num bacha">{g.bacha}</td>
 
                   <td className="no-print">
                     <MinInput
@@ -655,11 +494,7 @@ export function StockPage() {
                   </td>
 
                   <td>
-                    <span
-                      className={
-                        'stamp ' + g.st.cls
-                      }
-                    >
+                    <span className={'stamp ' + g.st.cls}>
                       {g.st.label}
                     </span>
                   </td>
@@ -668,9 +503,7 @@ export function StockPage() {
                     <button
                       className="btn sm ghost"
                       type="button"
-                      onClick={() =>
-                        goList({ q: g.name })
-                      }
+                      onClick={() => goList({ q: g.name })}
                     >
                       Entries
                       <Icon name="chevR" />
@@ -694,9 +527,7 @@ export function StockPage() {
         tab="stock"
       />
 
-      {items.length > 0 && (
-        <FiltersBar tab="stock" />
-      )}
+      {items.length > 0 && <FiltersBar tab="stock" />}
 
       {body}
     </>
@@ -720,32 +551,17 @@ export function IssuesPage() {
   const list = filteredIssues(items, f);
   const mv = filterLog(mvAll, f);
 
-  const pcs = list.reduce(
-    (s, i) => s + i.qty,
-    0,
-  );
-
-  const val = list.reduce(
-    (s, i) =>
-      s + i.qty * i.rate,
-    0,
-  );
-
-  const showMoves =
-    mv.length > 0 && !f.dept;
+  const pcs = list.reduce((s, i) => s + i.qty, 0);
+  const val = list.reduce((s, i) => s + i.qty * i.rate, 0);
+  const showMoves = mv.length > 0 && !f.dept;
 
   const pm = new Map<
     string,
-    {
-      name: string;
-      pcs: number;
-      n: number;
-    }
+    { name: string; pcs: number; n: number }
   >();
 
   for (const i of list) {
     const k = (i.person || '').trim();
-
     if (!k) continue;
 
     const r = pm.get(k.toLowerCase()) || {
@@ -756,46 +572,31 @@ export function IssuesPage() {
 
     r.pcs += i.qty;
     r.n++;
-
     pm.set(k.toLowerCase(), r);
   }
 
-  const people = Array.from(
-    pm.values(),
-  )
+  const people = Array.from(pm.values())
     .sort((a, b) => b.pcs - a.pcs)
     .slice(0, 8);
 
   let body: ReactNode;
 
   if (!items.length) {
-    body = (
-      <EmptyState onNew={newEntry} />
-    );
-  } else if (
-    !all.length &&
-    !mvAll.length
-  ) {
+    body = <EmptyState onNew={newEntry} />;
+  } else if (!all.length && !mvAll.length) {
     body = (
       <div className="nores">
         <span className="nores-ic">
           <Icon name="users" />
         </span>
-
         <p>
-          Abhi tak kisi ko kuch nahi diya.
-          Saman ki list me koi entry kholo
-          aur &quot;Kisi ko do&quot; dabao.
+          Abhi tak kisi ko kuch nahi diya. Saman ki list me koi
+          entry kholo aur &quot;Kisi ko do&quot; dabao.
         </p>
       </div>
     );
-  } else if (
-    !list.length &&
-    !showMoves
-  ) {
-    body = (
-      <NoRes onClear={clearFilters} />
-    );
+  } else if (!list.length && !showMoves) {
+    body = <NoRes onClear={clearFilters} />;
   } else {
     body = (
       <>
@@ -810,22 +611,14 @@ export function IssuesPage() {
                 type="button"
                 className="person"
                 onClick={() =>
-                  setF((x) => ({
-                    ...x,
-                    q: p.name,
-                  }))
+                  setF((x) => ({ ...x, q: p.name }))
                 }
-                title={
-                  p.name +
-                  ' ki entries dikhao'
-                }
+                title={p.name + ' ki entries dikhao'}
               >
                 <span className="avatar sm">
                   {initials(p.name)}
                 </span>
-
                 <span>{p.name}</span>
-
                 <b>{p.pcs} pcs</b>
               </button>
             ))}
@@ -838,16 +631,11 @@ export function IssuesPage() {
               <span>
                 <b>{list.length}</b> baar diya
               </span>
-
               <span>
                 <b>{pcs}</b> pcs
               </span>
-
               <span className="sum-tot">
-                Kul keemat{' '}
-                <strong>
-                  {inr(val)}
-                </strong>
+                Kul keemat <strong>{inr(val)}</strong>
               </span>
             </div>
 
@@ -857,87 +645,50 @@ export function IssuesPage() {
                   <tr>
                     <th>Kab diya</th>
                     <th>Saman</th>
-                    <th className="num">
-                      Pcs
-                    </th>
+                    <th className="num">Pcs</th>
                     <th>Kisko diya</th>
                     <th>Department</th>
-                    <th className="num">
-                      Keemat
-                    </th>
+                    <th className="num">Keemat</th>
                     <th>Note</th>
-                    <th className="pcol">
-                      Sign
-                    </th>
+                    <th className="pcol">Sign</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {list.map((i) => (
-                    <tr
-                      key={
-                        i.itemId + i.id
-                      }
-                    >
+                    <tr key={i.itemId + i.id}>
                       <td className="nowrap">
-                        {fdate(i.date) ||
-                          '—'}
+                        {fdate(i.date) || '—'}
                       </td>
-
                       <td>
                         <button
                           className="link"
                           type="button"
-                          onClick={() =>
-                            openEntry(
-                              i.itemId,
-                            )
-                          }
+                          onClick={() => openEntry(i.itemId)}
                         >
-                          {i.itemName ||
-                            '(bina naam)'}
+                          {i.itemName || '(bina naam)'}
                         </button>
                       </td>
-
-                      <td className="num">
-                        {i.qty}
-                      </td>
-
+                      <td className="num">{i.qty}</td>
                       <td>
                         <span className="who-cell">
                           <span className="avatar xs">
-                            {initials(
-                              i.person ||
-                                '?',
-                            )}
+                            {initials(i.person || '?')}
                           </span>
-
-                          {i.person ||
-                            '—'}
+                          {i.person || '—'}
                         </span>
                       </td>
-
                       <td>
                         {i.dept ? (
-                          <span className="tag">
-                            {i.dept}
-                          </span>
+                          <span className="tag">{i.dept}</span>
                         ) : (
                           '—'
                         )}
                       </td>
-
                       <td className="num">
-                        {i.rate
-                          ? inr(
-                              i.qty *
-                                i.rate,
-                            )
-                          : '—'}
+                        {i.rate ? inr(i.qty * i.rate) : '—'}
                       </td>
-
                       <td>{i.note}</td>
-
                       <td className="pcol" />
                     </tr>
                   ))}
@@ -946,11 +697,7 @@ export function IssuesPage() {
             </div>
           </>
         ) : (
-          all.length > 0 && (
-            <NoRes
-              onClear={clearFilters}
-            />
-          )
+          all.length > 0 && <NoRes onClear={clearFilters} />
         )}
 
         {showMoves && (
@@ -966,52 +713,34 @@ export function IssuesPage() {
                     <th>Kab</th>
                     <th>Saman</th>
                     <th>Kya hua</th>
-                    <th className="num">
-                      Pcs
-                    </th>
-                    <th className="num">
-                      Keemat
-                    </th>
+                    <th className="num">Pcs</th>
+                    <th className="num">Keemat</th>
                     <th>Note</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {mv.map((m) => (
-                    <tr
-                      key={
-                        m.itemId + m.id
-                      }
-                    >
+                    <tr key={m.itemId + m.id}>
                       <td className="nowrap">
-                        {fdate(m.date) ||
-                          '—'}
+                        {fdate(m.date) || '—'}
                       </td>
-
                       <td>
                         <button
                           className="link"
                           type="button"
-                          onClick={() =>
-                            openEntry(
-                              m.itemId,
-                            )
-                          }
+                          onClick={() => openEntry(m.itemId)}
                         >
-                          {m.itemName ||
-                            '(bina naam)'}
+                          {m.itemName || '(bina naam)'}
                         </button>
                       </td>
-
                       <td>
                         <span
                           className={
                             'stamp ' +
-                            (m.type ===
-                            'back'
+                            (m.type === 'back'
                               ? 'ok'
-                              : m.type ===
-                                  'damaged'
+                              : m.type === 'damaged'
                                 ? 'low'
                                 : 'warn')
                           }
@@ -1019,20 +748,10 @@ export function IssuesPage() {
                           {MOVE[m.type]}
                         </span>
                       </td>
-
+                      <td className="num">{m.qty}</td>
                       <td className="num">
-                        {m.qty}
+                        {m.rate ? inr(m.qty * m.rate) : '—'}
                       </td>
-
-                      <td className="num">
-                        {m.rate
-                          ? inr(
-                              m.qty *
-                                m.rate,
-                            )
-                          : '—'}
-                      </td>
-
                       <td>{m.note}</td>
                     </tr>
                   ))}
@@ -1055,8 +774,7 @@ export function IssuesPage() {
       />
 
       {items.length > 0 &&
-        (all.length > 0 ||
-          mvAll.length > 0) && (
+        (all.length > 0 || mvAll.length > 0) && (
           <FiltersBar tab="issues" />
         )}
 
@@ -1089,15 +807,10 @@ function Block({
   countKey: 'n' | 'pcs';
   tone?: 'gold' | 'red';
 }) {
-  const max = Math.max(
-    1,
-    ...rows.map((r) => r.amt),
-  );
+  const max = Math.max(1, ...rows.map((r) => r.amt));
 
   let body: ReactNode = (
-    <p className="none">
-      Abhi kuch nahi.
-    </p>
+    <p className="none">Abhi kuch nahi.</p>
   );
 
   if (rows.length) {
@@ -1107,19 +820,10 @@ function Block({
           <thead>
             <tr>
               <th>{cols[0]}</th>
-
-              <th className="num">
-                {cols[1]}
-              </th>
-
-              <th className="num">
-                Rupaye
-              </th>
-
+              <th className="num">{cols[1]}</th>
+              <th className="num">Rupaye</th>
               <th className="barcol">
-                <span className="sr">
-                  Bar
-                </span>
+                <span className="sr">Bar</span>
               </th>
             </tr>
           </thead>
@@ -1128,39 +832,19 @@ function Block({
             {rows.map((r, i) => {
               const w =
                 r.amt > 0
-                  ? Math.max(
-                      1.5,
-                      (r.amt / max) *
-                        100,
-                    )
+                  ? Math.max(1.5, (r.amt / max) * 100)
                   : 0;
 
               return (
-                <tr
-                  key={
-                    i + ':' + r.name
-                  }
-                >
+                <tr key={i + ':' + r.name}>
                   <td>{r.name}</td>
-
-                  <td className="num">
-                    {r[countKey]}
-                  </td>
-
-                  <td className="num">
-                    {inr(r.amt)}
-                  </td>
-
+                  <td className="num">{r[countKey]}</td>
+                  <td className="num">{inr(r.amt)}</td>
                   <td className="barcol">
                     <span className="track">
                       <span
                         className="bar"
-                        style={{
-                          width:
-                            w.toFixed(
-                              1,
-                            ) + '%',
-                        }}
+                        style={{ width: w.toFixed(1) + '%' }}
                       />
                     </span>
                   </td>
@@ -1174,51 +858,25 @@ function Block({
   }
 
   return (
-    <section
-      className={
-        'sblock' +
-        (tone
-          ? ' t-' + tone
-          : '')
-      }
-    >
+    <section className={'sblock' + (tone ? ' t-' + tone : '')}>
       <header>
         <h2>{title}</h2>
-
-        {note && (
-          <p>{note}</p>
-        )}
+        {note && <p>{note}</p>}
       </header>
-
       {body}
     </section>
   );
 }
 
 export function HisaabPage() {
-  const {
-    items,
-    f,
-    newEntry,
-  } = useReg();
+  const { items, f, newEntry } = useReg();
+  const list = filteredItems(items, f, 'summary');
 
-  const list = filteredItems(
-    items,
-    f,
-    'summary',
-  );
-
-  const group = (
-    keyFn: (it: Item) => string,
-  ): BRow[] => {
-    const m = new Map<
-      string,
-      BRow
-    >();
+  const group = (keyFn: (it: Item) => string): BRow[] => {
+    const m = new Map<string, BRow>();
 
     for (const it of list) {
       const k = keyFn(it);
-
       const r = m.get(k) || {
         name: k,
         n: 0,
@@ -1229,61 +887,31 @@ export function HisaabPage() {
       r.n++;
       r.pcs += num(it.qty);
       r.amt += num(it.total);
-
       m.set(k, r);
     }
 
-    return Array.from(
-      m.values(),
-    );
+    return Array.from(m.values());
   };
 
   const months = group(
-    (it) =>
-      it.orderDate.slice(
-        0,
-        7,
-      ) || '—',
+    (it) => it.orderDate.slice(0, 7) || '—',
   )
-    .sort((a, b) =>
-      b.name.localeCompare(
-        a.name,
-      ),
-    )
-    .map((o) => ({
-      ...o,
-      name: mlabel(o.name),
-    }));
+    .sort((a, b) => b.name.localeCompare(a.name))
+    .map((o) => ({ ...o, name: mlabel(o.name) }));
 
   const vendors = group(
-    (it) =>
-      it.vendor ||
-      'Nahi likha',
-  ).sort(
-    (a, b) =>
-      b.amt - a.amt,
-  );
+    (it) => it.vendor || 'Nahi likha',
+  ).sort((a, b) => b.amt - a.amt);
 
   const cats = group(
-    (it) =>
-      it.category ||
-      'Nahi likha',
-  ).sort(
-    (a, b) =>
-      b.amt - a.amt,
-  );
+    (it) => it.category || 'Nahi likha',
+  ).sort((a, b) => b.amt - a.amt);
 
-  const dm = new Map<
-    string,
-    BRow
-  >();
+  const dm = new Map<string, BRow>();
 
   for (const it of list) {
     for (const is of it.issues) {
-      const k =
-        is.dept ||
-        'Department nahi likha';
-
+      const k = is.dept || 'Department nahi likha';
       const r = dm.get(k) || {
         name: k,
         n: 0,
@@ -1292,21 +920,13 @@ export function HisaabPage() {
       };
 
       r.pcs += num(is.qty);
-
-      r.amt +=
-        num(is.qty) *
-        num(it.rate);
-
+      r.amt += num(is.qty) * num(it.rate);
       dm.set(k, r);
     }
   }
 
-  const depts = Array.from(
-    dm.values(),
-  ).sort(
-    (a, b) =>
-      b.amt - a.amt,
-  );
+  const depts = Array.from(dm.values())
+    .sort((a, b) => b.amt - a.amt);
 
   let myP = 0;
   let myB = 0;
@@ -1316,21 +936,14 @@ export function HisaabPage() {
 
   for (const it of list) {
     const m = myPay(it);
-
     if (!m.mine) continue;
 
     nP++;
-
     myP += m.paid;
     myB += m.back;
 
-    if (m.back > 0) {
-      nB++;
-    }
-
-    if (m.due > 0) {
-      nD++;
-    }
+    if (m.back > 0) nB++;
+    if (m.due > 0) nD++;
   }
 
   const myRows: BRow[] = nP
@@ -1351,12 +964,7 @@ export function HisaabPage() {
           name: 'Abhi baaki',
           n: nD,
           pcs: 0,
-          amt: Math.max(
-            0,
-            round2(
-              myP - myB,
-            ),
-          ),
+          amt: Math.max(0, round2(myP - myB)),
         },
       ]
     : [];
@@ -1370,10 +978,7 @@ export function HisaabPage() {
             name:
               it.item +
               (it.orderDate
-                ? ' · ' +
-                  fdate(
-                    it.orderDate,
-                  )
+                ? ' · ' + fdate(it.orderDate)
                 : ''),
             n: 1,
             pcs: num(it.qty),
@@ -1381,13 +986,8 @@ export function HisaabPage() {
           }
         : null;
     })
-    .filter(
-      (r): r is BRow => !!r,
-    )
-    .sort(
-      (a, b) =>
-        b.amt - a.amt,
-    );
+    .filter((r): r is BRow => !!r)
+    .sort((a, b) => b.amt - a.amt);
 
   return (
     <>
@@ -1406,25 +1006,15 @@ export function HisaabPage() {
 
           <div className="sumbar">
             <span>
-              <b>{list.length}</b>{' '}
-              entries ka kul kharcha
+              <b>{list.length}</b> entries ka kul kharcha
             </span>
 
-            {filtersActive(
-              f,
-              'summary',
-            ) && (
-              <span className="muted">
-                filter laga hai
-              </span>
+            {filtersActive(f, 'summary') && (
+              <span className="muted">filter laga hai</span>
             )}
 
             <span className="sum-tot">
-              <strong>
-                {inr(
-                  sumTotal(list),
-                )}
-              </strong>
+              <strong>{inr(sumTotal(list))}</strong>
             </span>
           </div>
 
@@ -1433,10 +1023,7 @@ export function HisaabPage() {
               title="Mahine ke hisaab se"
               note="Jis mahine mangaya, us mahine ka kharcha"
               rows={months}
-              cols={[
-                'Mahina',
-                'Entries',
-              ]}
+              cols={['Mahina', 'Entries']}
               countKey="n"
               tone="gold"
             />
@@ -1445,10 +1032,7 @@ export function HisaabPage() {
               title="Kahan se mangaya"
               note="Har dukaan ya site se kitne ka saman aaya"
               rows={vendors}
-              cols={[
-                'Dukaan / site',
-                'Entries',
-              ]}
+              cols={['Dukaan / site', 'Entries']}
               countKey="n"
             />
 
@@ -1456,10 +1040,7 @@ export function HisaabPage() {
               title="Kis tarah ka saman"
               note="Category ke hisaab se kharcha"
               rows={cats}
-              cols={[
-                'Saman',
-                'Pcs',
-              ]}
+              cols={['Saman', 'Pcs']}
               countKey="pcs"
             />
 
@@ -1467,10 +1048,7 @@ export function HisaabPage() {
               title="Department ko kitna diya"
               note="Jitne piece diye, unki keemat rate ke hisaab se"
               rows={depts}
-              cols={[
-                'Department',
-                'Pcs',
-              ]}
+              cols={['Department', 'Pcs']}
               countKey="pcs"
             />
 
@@ -1478,10 +1056,7 @@ export function HisaabPage() {
               title="Mera paisa"
               note="Jo aapne apni jeb se diye, kitne wapas mile, kitne baaki"
               rows={myRows}
-              cols={[
-                'Hisaab',
-                'Entries',
-              ]}
+              cols={['Hisaab', 'Entries']}
               countKey="n"
               tone="gold"
             />
@@ -1490,10 +1065,7 @@ export function HisaabPage() {
               title="Kis saman ke mere paise baaki"
               note="Jin entries ke paise abhi wapas milne hai"
               rows={dueRows}
-              cols={[
-                'Saman',
-                'Pcs',
-              ]}
+              cols={['Saman', 'Pcs']}
               countKey="pcs"
               tone="red"
             />
@@ -1515,7 +1087,6 @@ export function SettingsPage() {
         print={false}
         add={false}
       />
-
       <SettingsSections />
     </>
   );
@@ -1532,7 +1103,6 @@ export function DemandPage() {
         print={false}
         add={false}
       />
-
       <DemandListLazy />
     </>
   );
