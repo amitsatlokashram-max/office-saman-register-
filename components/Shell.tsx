@@ -31,6 +31,7 @@ import {
 } from '@/lib/sync';
 import {
   configOK,
+  missingFirebaseConfig,
   setNotifier,
   signInGoogle,
   signOutUser,
@@ -644,6 +645,7 @@ export default function Shell({
         <Gate
           kind={phase}
           email={me?.email}
+          missingConfig={missingFirebaseConfig}
           onSignIn={signIn}
           onSignOut={signOutNow}
         />

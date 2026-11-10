@@ -9,11 +9,13 @@ export type GateKind = 'loading' | 'setup' | 'login' | 'denied';
 export function Gate({
   kind,
   email,
+  missingConfig = [],
   onSignIn,
   onSignOut,
 }: {
   kind: GateKind;
   email?: string;
+  missingConfig?: string[];
   onSignIn: (remember: boolean) => void;
   onSignOut: () => void;
 }) {
@@ -44,8 +46,23 @@ export function Gate({
         {kind === 'setup' && (
           <>
             <h2>Setup Firebase</h2>
-            <p>
-              Environment variables configure karein.
+            <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#94a3b8' }}>
+              Environment variables configure karne hain taaki app login aur data kaam kare.
+            </p>
+            {missingConfig.length > 0 && (
+              <div style={{ width: '100%', textAlign: 'left', marginBottom: '10px', padding: '10px 12px', borderRadius: '10px', background: 'rgba(15, 23, 42, 0.68)', border: '1px solid rgba(129, 140, 248, 0.35)' }}>
+                <p style={{ margin: '0 0 8px 0', fontSize: '11px', color: '#c4b5fd', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  Missing values
+                </p>
+                <ul style={{ margin: 0, paddingLeft: '18px', color: '#e2e8f0', fontSize: '12px', lineHeight: '1.6' }}>
+                  {missingConfig.map((key) => (
+                    <li key={key}>{key}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+              README me step-by-step setup follow karo, phir app ko redeploy kar do.
             </p>
           </>
         )}
