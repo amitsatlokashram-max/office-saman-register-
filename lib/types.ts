@@ -25,6 +25,10 @@ export type Move = { id: string; date: string; qty: number; type: MoveType; note
 
 export type Item = {
   id: string;
+  arrivalNo: string;
+  arrivalTime: string;
+  arrivalMode: 'demand' | 'direct' | 'unknown';
+  receivedBy: string;
   item: string;
   category: string;
   qty: number;

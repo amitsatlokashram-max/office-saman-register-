@@ -43,6 +43,7 @@ const DemandListLazy = dynamic(
 
 function subLine(it: Item) {
   return [
+    it.arrivalNo || '',
     it.category,
     it.billNo ? 'Bill: ' + it.billNo : '',
   ].filter(Boolean).join(' · ');

@@ -46,12 +46,21 @@ const config = {
 
 export const configOK = !!(config.apiKey && config.projectId && config.authDomain && config.appId);
 
+const SAFE_CONFIG = {
+  apiKey: 'demo-key',
+  authDomain: 'demo-project.firebaseapp.com',
+  projectId: 'demo-project',
+  storageBucket: 'demo-project.firebasestorage.app',
+  messagingSenderId: '0000000000',
+  appId: '1:0000000000:web:demo',
+};
+
 let _app: FirebaseApp | null = null;
 let _auth: Auth | null = null;
 let _db: Firestore | null = null;
 
 function fbApp(): FirebaseApp {
-  if (!_app) _app = getApps().length ? getApp() : initializeApp(config);
+  if (!_app) _app = getApps().length ? getApp() : initializeApp(configOK ? config : SAFE_CONFIG);
   return _app;
 }
 function fbAuth(): Auth {
@@ -60,18 +69,29 @@ function fbAuth(): Auth {
 }
 function fbDb(): Firestore {
   if (_db) return _db;
-  try {
-    // Net na ho tab bhi chale: data phone me bhi rehta hai
-    _db = initializeFirestore(fbApp(), {
-      ignoreUndefinedProperties: true,
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-    });
-  } catch {
+
+  if (!configOK) {
+    _db = getFirestore(fbApp());
+    return _db;
+  }
+
+  if (typeof window !== 'undefined') {
     try {
-      _db = initializeFirestore(fbApp(), { ignoreUndefinedProperties: true, localCache: memoryLocalCache() });
+      // Net na ho tab bhi chale: data phone me bhi rehta hai
+      _db = initializeFirestore(fbApp(), {
+        ignoreUndefinedProperties: true,
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      });
+      return _db;
     } catch {
-      _db = getFirestore(fbApp());
+      // Fall through to in-memory cache for browsers that block persistent storage.
     }
+  }
+
+  try {
+    _db = initializeFirestore(fbApp(), { ignoreUndefinedProperties: true, localCache: memoryLocalCache() });
+  } catch {
+    _db = getFirestore(fbApp());
   }
   return _db;
 }

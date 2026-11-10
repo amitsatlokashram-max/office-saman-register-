@@ -124,9 +124,22 @@ export function warrantyState(it: Item): Warranty {
   return { key: 'ok', label: 'Warranty ' + fdate(it.warrantyTill) + ' tak', cls: 'ok', n };
 }
 
+export function nextArrivalNo(items: Item[]): string {
+  const nums = items
+    .map((it) => String(it.arrivalNo || '').trim())
+    .filter((v): v is string => /^AWK-\d{4,}$/.test(v));
+  let max = 0;
+  for (const value of nums) {
+    const n = Number(value.replace(/^AWK-/, ''));
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return `AWK-${String(max + 1).padStart(4, '0')}`;
+}
+
 export function blankItem(id: string, me: Me | null): Item {
   return {
     id,
+    arrivalNo: '', arrivalTime: new Date().toTimeString().slice(0, 5), arrivalMode: 'unknown', receivedBy: '',
     item: '', category: '', qty: 1, rate: 0, total: 0,
     orderDate: today(), receivedDate: '', vendor: '', broughtBy: '', billNo: '', note: '',
     serials: '', warrantyTill: '',
@@ -147,6 +160,7 @@ export function normalizeItem(id: string, d: Record<string, unknown>): Item {
   const mt = (t: string): MoveType => (t === 'back' || t === 'vendor' ? t : 'damaged');
   return {
     id,
+    arrivalNo: s('arrivalNo') || s('invoiceNo') || '', arrivalTime: s('arrivalTime') || '', arrivalMode: d.arrivalMode === 'demand' || d.arrivalMode === 'direct' ? d.arrivalMode : 'unknown', receivedBy: s('receivedBy') || '',
     item: s('item'), category: s('category'), qty: num(d.qty), rate: num(d.rate), total: num(d.total),
     orderDate: s('orderDate'), receivedDate: s('receivedDate'), vendor: s('vendor'), broughtBy: s('broughtBy'),
     billNo: s('billNo'), note: s('note'), serials: s('serials'), warrantyTill: s('warrantyTill'),

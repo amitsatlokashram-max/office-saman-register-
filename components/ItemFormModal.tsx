@@ -24,6 +24,7 @@ export function ItemFormModal({ open, editId, onClose }: { open: boolean; editId
 }
 
 type Vals = {
+  arrivalNo: string; arrivalTime: string; arrivalMode: 'demand' | 'direct' | 'unknown'; receivedBy: string;
   item: string; category: string; billNo: string;
   qty: string; rate: string; total: string;
   orderDate: string; receivedDate: string; vendor: string; broughtBy: string; note: string;
@@ -38,6 +39,7 @@ const str = (n: number) => (n ? String(n) : '');
 
 function initVals(it?: Item): Vals {
   return {
+    arrivalNo: it?.arrivalNo ?? '', arrivalTime: it?.arrivalTime ?? new Date().toTimeString().slice(0, 5), arrivalMode: it?.arrivalMode ?? 'unknown', receivedBy: it?.receivedBy ?? '',
     item: it?.item ?? '', category: it?.category ?? '', billNo: it?.billNo ?? '',
     qty: it ? String(num(it.qty)) : '1', rate: it ? str(it.rate) : '', total: it ? str(it.total) : '',
     orderDate: it ? it.orderDate : today(), receivedDate: it?.receivedDate ?? '',
@@ -63,7 +65,19 @@ const formTotal = (v: Vals) => num(v.total) || round2(num(v.rate) * Math.round(n
 function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => void }) {
   const { items, getItem, me, toast, ai } = useReg();
   const save = useSave();
-  const [v, setV] = useState<Vals>(() => initVals(editId ? getItem(editId) : undefined));
+  const [v, setV] = useState<Vals>(() => {
+    const existing = editId ? getItem(editId) : undefined;
+    const value = initVals(existing);
+    if (!editId) {
+      const next = 'AWK-' + String((items.filter((it) => /^AWK-\d{4,}$/.test(it.arrivalNo || '')).reduce((max, it) => {
+        const n = Number((it.arrivalNo || '').replace(/^AWK-/, ''));
+        return Number.isFinite(n) && n > max ? n : max;
+      }, 0) + 1)).padStart(4, '0');
+      value.arrivalNo = next;
+    }
+    if (!editId && !value.arrivalTime) value.arrivalTime = new Date().toTimeString().slice(0, 5);
+    return value;
+  });
   const vRef = useRef(v);
   vRef.current = v;
   const [bills, setBills] = useState<Bill[]>(() => (editId ? getItem(editId)?.bills.map((b) => ({ ...b })) ?? [] : []));
@@ -238,7 +252,15 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
 
   /* ---------- save ---------- */
   function common(x: Vals) {
+    const nextNo = (x.arrivalNo || '').trim() || `AWK-${String((items.filter((it) => /^AWK-\d{4,}$/.test(it.arrivalNo || '')).reduce((max, it) => {
+      const n = Number((it.arrivalNo || '').replace(/^AWK-/, ''));
+      return Number.isFinite(n) && n > max ? n : max;
+    }, 0) + 1)).padStart(4, '0')}`;
     return {
+      arrivalNo: nextNo,
+      arrivalTime: x.arrivalTime || new Date().toTimeString().slice(0, 5),
+      arrivalMode: x.arrivalMode,
+      receivedBy: x.receivedBy.trim(),
       orderDate: x.orderDate, receivedDate: x.receivedDate, vendor: x.vendor.trim(), broughtBy: x.broughtBy.trim(),
       billNo: x.billNo.trim(), note: x.note.trim(),
     };
@@ -276,6 +298,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
       setErrs({ qty: 'Itne piece pehle hi de chuke ho ya kharab likhe hai, isse kam nahi ho sakta' });
       return focus('f-qty');
     }
+    const arrivalMeta = common(v);
     let my = { iPaid: false, myPaid: 0, myBack: 0, myBackDate: '' };
     if (v.iPaid) {
       const paid = round2(num(v.myPaid)) || total;
@@ -289,8 +312,12 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
     const base: Item = existing ? structuredClone(existing) : blankItem(newItemId(), me);
     const doc: Item = {
       ...base,
-      ...common(v),
+      ...arrivalMeta,
       ...my,
+      arrivalNo: arrivalMeta.arrivalNo,
+      arrivalTime: arrivalMeta.arrivalTime,
+      arrivalMode: arrivalMeta.arrivalMode,
+      receivedBy: arrivalMeta.receivedBy,
       item,
       category: v.category.trim(),
       qty,
@@ -617,8 +644,28 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
         </div>
 
         <div className="fsec">
-          <h3 className="fsh">Kab aur kahan se</h3>
+          <h3 className="fsh">आवक की जानकारी</h3>
           <div className="fgrid">
+            <div className="field">
+              <label htmlFor="f-arrivalNo">आवक नंबर</label>
+              <input id="f-arrivalNo" value={v.arrivalNo || 'AWK-0001'} onChange={(e) => set('arrivalNo', e.target.value)} placeholder="AWK-0001" />
+            </div>
+            <div className="field">
+              <label htmlFor="f-arrivalTime">आवक का समय</label>
+              <input id="f-arrivalTime" type="time" value={v.arrivalTime} onChange={(e) => set('arrivalTime', e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="f-arrivalMode">आवक का प्रकार</label>
+              <select id="f-arrivalMode" value={v.arrivalMode} onChange={(e) => set('arrivalMode', e.target.value as 'demand' | 'direct' | 'unknown')}>
+                <option value="unknown">अस्पष्ट</option>
+                <option value="demand">डिमांड से आया</option>
+                <option value="direct">सीधी खरीद</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="f-receivedBy">किसने प्राप्त किया</label>
+              <input id="f-receivedBy" placeholder="Amit, Office team…" autoComplete="off" value={v.receivedBy} onChange={(e) => set('receivedBy', e.target.value)} />
+            </div>
             <div className="field">
               <label htmlFor="f-orderDate">Kab mangaya</label>
               <input id="f-orderDate" type="date" className={cls('orderDate')} value={v.orderDate} onChange={(e) => set('orderDate', e.target.value)} />

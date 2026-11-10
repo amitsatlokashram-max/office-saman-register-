@@ -97,8 +97,19 @@ export function Dashboard() {
     },
   ];
 
+  const quickActions = [
+    { label: 'Naya saman', icon: 'plus' as const, tone: 'primary', onClick: newEntry },
+    { label: 'Stock check', icon: 'layers' as const, tone: 'blue', onClick: () => goList({ stock: 'low' }, '/stock') },
+    { label: 'Mahina report', icon: 'chart' as const, tone: 'green', onClick: () => goList({ month: mk }, '/hisaab') },
+  ];
+
   /* ---- dhyan do ---- */
   const low = groups.filter((g) => g.low);
+  const heroStats = [
+    { label: 'Aaj ka kharcha', value: inr(thisM.reduce((s, i) => s + num(i.total), 0)), tone: 'indigo' },
+    { label: 'Stock alert', value: String(low.length), tone: low.length ? 'red' : 'green' },
+    { label: 'Mera paisa baaki', value: inr(myDue), tone: myDue > 0 ? 'amber' : 'green' },
+  ];
   const soon = items.filter((i) => warrantyState(i)?.key === 'soon');
   const over = items.filter((i) => warrantyState(i)?.key === 'over');
   const noBill = items.filter((i) => !i.bills.length);
@@ -148,6 +159,36 @@ export function Dashboard() {
   return (
     <>
       {head}
+
+      <section className="dashboard-hero" aria-label="Office dashboard summary">
+        <div className="hero-copy">
+          <span className="hero-badge">
+            <Icon name="spark" />
+            Office pulse
+          </span>
+          <h2>Har saman, har paise, har note ek jagah.</h2>
+          <p>
+            Is dashboard se stock, pending deliveries, budget aur warranty sab ek nazar me dikhte hain — ready to act in seconds.
+          </p>
+          <div className="hero-actions">
+            {quickActions.map((action) => (
+              <button key={action.label} type="button" className={'btn ' + (action.tone === 'primary' ? 'primary' : 'ghost')} onClick={action.onClick}>
+                <Icon name={action.icon} />
+                {action.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="hero-rail" aria-label="quick metrics">
+          {heroStats.map((stat) => (
+            <div key={stat.label} className={'mini-stat ' + stat.tone}>
+              <span className="mini-label">{stat.label}</span>
+              <strong className="mini-value">{stat.value}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="stats">
         {stats.map((s) => (
