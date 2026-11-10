@@ -10,6 +10,7 @@ import { useReg } from './context';
 export function PageHead({
   title,
   sub,
+  className,
   csv,
   tab,
   print = true,
@@ -18,6 +19,7 @@ export function PageHead({
 }: {
   title: string;
   sub?: ReactNode;
+  className?: string;
   csv?: Tab;
   tab?: Tab;
   print?: boolean;
@@ -27,7 +29,7 @@ export function PageHead({
   const { me, items, f, exportCsv, printPage, newEntry } = useReg();
   const fs = tab ? filterSummary(f, tab) : '';
   return (
-    <header className="phead">
+    <header className={'phead' + (className ? ' ' + className : '')}>
       <div className="phead-t">
         <h1>{title}</h1>
         {sub && <p>{sub}</p>}

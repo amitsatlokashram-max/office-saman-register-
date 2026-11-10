@@ -2,12 +2,9 @@
 
 import type { ReactNode } from 'react';
 import {
-  allIssues,
   dayLong,
   fdate,
-  initials,
   inr,
-  inrShort,
   lastMonths,
   mlabel,
   monShort,
@@ -20,7 +17,7 @@ import {
 } from '@/lib/calc';
 import type { Item } from '@/lib/types';
 import { Icon, type IconName } from './Icon';
-import { EmptyState, PageHead } from './PageParts';
+import { PageHead } from './PageParts';
 import { useReg } from './context';
 
 function Card({ title, action, className, children }: { title: string; action?: ReactNode; className?: string; children: ReactNode }) {
@@ -38,16 +35,8 @@ function Card({ title, action, className, children }: { title: string; action?: 
 const byNew = (a: Item, b: Item) => (b.createdAt || b.orderDate).localeCompare(a.createdAt || a.orderDate);
 
 export function Dashboard() {
-  const { me, items, groups, goList, openEntry, newEntry } = useReg();
-  const first = (me?.name || '').trim().split(/\s+/)[0];
-  const head = <PageHead title="Dashboard" sub={(first ? 'Namaste ' + first + ', ' : '') + dayLong()} />;
-  if (!items.length)
-    return (
-      <>
-        {head}
-        <EmptyState onNew={newEntry} />
-      </>
-    );
+  const { items, groups, goList, openEntry } = useReg();
+  const head = <PageHead title="Dashboard" sub={dayLong()} className="dashboard-head" />;
 
   /* ---- mahine ---- */
   const mk = today().slice(0, 7);
@@ -88,8 +77,8 @@ export function Dashboard() {
     },
     { id: 'st-total', icon: 'rupee', tone: 'violet', label: 'Kul kharcha', value: inr(sumTotal(items)), sub: items.length + ' entries, ' + allPcs + ' pcs', go: () => goList({}, '/hisaab') },
     {
-      id: 'st-pend', icon: 'truck', tone: 'amber', label: 'Abhi nahi aaya', value: String(pend.length),
-      sub: pend.length ? inr(sumTotal(pend)) + ' ka saman aana baaki' : 'Sab aa gaya', go: () => goList({ status: 'pending' }),
+      id: 'st-pend', icon: 'truck', tone: 'amber', label: 'Saman aana baaki', value: String(pend.length),
+      sub: pend.length ? pend.length + (pend.length === 1 ? ' entry pending · ' : ' entries pending · ') + inr(sumTotal(pend)) : 'Sab saman aa gaya', go: () => goList({ status: 'pending' }),
     },
     {
       id: 'st-pay', icon: 'wallet', tone: 'red', label: 'Mere paise baaki', value: inr(myDue),
@@ -97,26 +86,11 @@ export function Dashboard() {
     },
   ];
 
-  const quickActions = [
-    { label: 'Naya saman', icon: 'plus' as const, tone: 'primary', onClick: newEntry },
-    { label: 'Stock check', icon: 'layers' as const, tone: 'blue', onClick: () => goList({ stock: 'low' }, '/stock') },
-    { label: 'Mahina report', icon: 'chart' as const, tone: 'green', onClick: () => goList({ month: mk }, '/hisaab') },
-  ];
-
   /* ---- dhyan do ---- */
   const low = groups.filter((g) => g.low);
-  const heroStats = [
-    { label: 'Aaj ka kharcha', value: inr(thisM.reduce((s, i) => s + num(i.total), 0)), tone: 'indigo' },
-    { label: 'Stock alert', value: String(low.length), tone: low.length ? 'red' : 'green' },
-    { label: 'Mera paisa baaki', value: inr(myDue), tone: myDue > 0 ? 'amber' : 'green' },
-  ];
   const soon = items.filter((i) => warrantyState(i)?.key === 'soon');
   const over = items.filter((i) => warrantyState(i)?.key === 'over');
   const noBill = items.filter((i) => !i.bills.length);
-  const iss = allIssues(items);
-  const issM = iss.filter((i) => i.date.startsWith(mk));
-  const givenPcs = issM.reduce((s, i) => s + i.qty, 0);
-  const bacha = groups.reduce((s, g) => s + g.bacha, 0);
   const alerts: { id: string; icon: IconName; tone: string; title: string; value: string; sub: string; hot: boolean; go: () => void }[] = [
     {
       id: 'st-low', icon: 'alert', tone: 'red', title: 'Kam stock', value: String(low.length),
@@ -133,21 +107,9 @@ export function Dashboard() {
       sub: noBill.length ? 'In entries me bill ki photo lagao' : 'Har entry me bill hai', hot: noBill.length > 0,
       go: () => goList({ status: 'nobill' }),
     },
-    {
-      id: 'st-stock', icon: 'layers', tone: 'green', title: 'Stock me bacha', value: bacha + ' pcs',
-      sub: groups.length + ' tarah ka saman', hot: false, go: () => goList({}, '/stock'),
-    },
-    {
-      id: 'st-given', icon: 'users', tone: 'indigo', title: 'Is mahine diya', value: givenPcs + ' pcs',
-      sub: issM.length ? issM.length + ' baar diya' : 'Abhi kisi ko nahi', hot: false, go: () => goList({ month: mk }, '/kisko-diya'),
-    },
   ];
 
   const recent = items.slice().sort(byNew).slice(0, 6);
-  const recentIss = iss
-    .slice()
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 6);
 
   const seeAll = (to: string) => (
     <button type="button" className="btn sm ghost" onClick={() => goList({}, to)}>
@@ -159,36 +121,6 @@ export function Dashboard() {
   return (
     <>
       {head}
-
-      <section className="dashboard-hero" aria-label="Office dashboard summary">
-        <div className="hero-copy">
-          <span className="hero-badge">
-            <Icon name="spark" />
-            Office pulse
-          </span>
-          <h2>Har saman, har paise, har note ek jagah.</h2>
-          <p>
-            Is dashboard se stock, pending deliveries, budget aur warranty sab ek nazar me dikhte hain — ready to act in seconds.
-          </p>
-          <div className="hero-actions">
-            {quickActions.map((action) => (
-              <button key={action.label} type="button" className={'btn ' + (action.tone === 'primary' ? 'primary' : 'ghost')} onClick={action.onClick}>
-                <Icon name={action.icon} />
-                {action.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="hero-rail" aria-label="quick metrics">
-          {heroStats.map((stat) => (
-            <div key={stat.label} className={'mini-stat ' + stat.tone}>
-              <span className="mini-label">{stat.label}</span>
-              <strong className="mini-value">{stat.value}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
 
       <div className="stats">
         {stats.map((s) => (
@@ -222,11 +154,11 @@ export function Dashboard() {
                   aria-label={mlabel(m) + ': ' + inr(v) + '. Us mahine ki entries dikhao'}
                   title={mlabel(m) + ': ' + inr(v)}
                 >
-                  <span className="mc-v">{v > 0 ? inrShort(v) : '—'}</span>
+                  <span className="mc-v">{v > 0 ? inr(v) : '—'}</span>
                   <span className="mc-bar">
                     <span style={{ height: h.toFixed(1) + '%' }} />
                   </span>
-                  <span className="mc-m">{monShort(m)}</span>
+                  <span className="mc-m">{mlabel(m)}</span>
                 </button>
               );
             })}
@@ -255,53 +187,31 @@ export function Dashboard() {
         </Card>
 
         <Card title="Haal ki entries" className="recent" action={seeAll('/saman')}>
-          <ul className="rlist">
-            {recent.map((it) => {
-              const st = status(it);
-              return (
-                <li key={it.id}>
-                  <button type="button" className="rrow" onClick={() => openEntry(it.id)}>
-                    <span className="ibox sm t-indigo">
-                      <Icon name="box" />
-                    </span>
-                    <span className="rt">
-                      <strong>{it.item || '(bina naam)'}</strong>
-                      <small>{[fdate(it.orderDate), num(it.qty) + ' pcs', it.vendor].filter(Boolean).join(' · ')}</small>
-                    </span>
-                    <span className="rr">
-                      <b>{inr(it.total)}</b>
-                      <span className={'stamp ' + st.cls}>{st.label}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-
-        <Card title="Haal me kisko diya" className="recent-iss" action={iss.length ? seeAll('/kisko-diya') : undefined}>
-          {recentIss.length ? (
+          {recent.length ? (
             <ul className="rlist">
-              {recentIss.map((i) => (
-                <li key={i.itemId + i.id}>
-                  <button type="button" className="rrow" onClick={() => openEntry(i.itemId)}>
-                    <span className="avatar">{initials(i.person || i.dept || '?')}</span>
-                    <span className="rt">
-                      <strong>
-                        {i.person || '—'}
-                        {i.dept && <span className="tag">{i.dept}</span>}
-                      </strong>
-                      <small>
-                        {i.qty} pcs {i.itemName}
-                        {i.date ? ' · ' + fdate(i.date) : ''}
-                      </small>
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {recent.map((it) => {
+                const st = status(it);
+                return (
+                  <li key={it.id}>
+                    <button type="button" className="rrow" onClick={() => openEntry(it.id)}>
+                      <span className="ibox sm t-indigo">
+                        <Icon name="box" />
+                      </span>
+                      <span className="rt">
+                        <strong>{it.item || '(bina naam)'}</strong>
+                        <small>{[fdate(it.orderDate), num(it.qty) + ' pcs', it.vendor].filter(Boolean).join(' · ')}</small>
+                      </span>
+                      <span className="rr">
+                        <b>{inr(it.total)}</b>
+                        <span className={'stamp ' + st.cls}>{st.label}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
-            <p className="none">Abhi tak kisi ko kuch nahi diya. Saman ki entry kholo aur &quot;Kisi ko do&quot; dabao.</p>
+            <p className="none">Abhi koi entry nahi hai. Upar “+ Naya saman” se pehli entry jodo.</p>
           )}
         </Card>
       </div>
