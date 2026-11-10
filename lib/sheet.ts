@@ -38,6 +38,13 @@ export const SAMAN_COLS: [string, string][] = [
   ['Entry kisne ki', TEXT],
   ['Aakhri badlav', TEXT],
   ['ID', TEXT],
+  ['Delivery No.', TEXT],
+  ['Demand ID', TEXT],
+  ['Mili Qty', INT],
+  ['Actual Rate (₹)', MONEY],
+  ['Saman ka Kharcha (₹)', MONEY],
+  ['Travel Share (₹)', MONEY],
+  ['Trip Cost (₹, ek row me)', MONEY],
 ];
 
 export const LOG_COLS: [string, string][] = [
@@ -91,6 +98,13 @@ export function itemRow(it: Item): Cell[] {
     it.addedByName,
     stamp(it.updatedAt || new Date().toISOString()),
     it.id,
+    it.arrivalNo,
+    it.demandId,
+    it.arrivalNo ? num(it.qty) : '',
+    it.arrivalNo ? num(it.rate) : '',
+    it.arrivalNo ? num(it.total) : '',
+    it.arrivalNo ? num(it.arrivalTravelShare) : '',
+    it.arrivalNo ? num(it.arrivalTravelCost) : '',
   ];
 }
 

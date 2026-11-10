@@ -193,6 +193,7 @@ export default function Shell({
   const [sync, setSync] = useState<SyncState>({
     enabled: false,
     pending: 0,
+    pendingIds: [],
     running: false,
     lastOk: '',
     lastErr: '',

@@ -20,7 +20,9 @@ import {
   round2,
   status,
   sumTotal,
+  today,
 } from '@/lib/calc';
+import { saveFile } from '@/lib/bills';
 import type { Item, StockGroup } from '@/lib/types';
 import { Icon } from './Icon';
 import { EmptyState, FiltersBar, NoRes, PageHead } from './PageParts';
@@ -845,6 +847,173 @@ function Block({
   );
 }
 
+type DeliveryReportGroup = {
+  key: string;
+  arrivalNo: string;
+  date: string;
+  time: string;
+  items: Item[];
+  itemTotal: number;
+  travelCost: number;
+  travelShare: number;
+};
+
+function ArrivalPurchaseReport({ items }: { items: Item[] }) {
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+
+  const grouped = new Map<string, DeliveryReportGroup>();
+  for (const item of items) {
+    if (!item.arrivalNo || !item.receivedDate) continue;
+    if (from && item.receivedDate < from) continue;
+    if (to && item.receivedDate > to) continue;
+    const key = item.arrivalNo + '|' + item.receivedDate;
+    const group = grouped.get(key) || {
+      key,
+      arrivalNo: item.arrivalNo,
+      date: item.receivedDate,
+      time: item.arrivalTime,
+      items: [],
+      itemTotal: 0,
+      travelCost: 0,
+      travelShare: 0,
+    };
+    group.items.push(item);
+    group.itemTotal += num(item.total);
+    group.travelCost += num(item.arrivalTravelCost);
+    group.travelShare += num(item.arrivalTravelShare);
+    if (!group.time && item.arrivalTime) group.time = item.arrivalTime;
+    grouped.set(key, group);
+  }
+  const deliveries = Array.from(grouped.values()).sort(
+    (a, b) => b.date.localeCompare(a.date) || b.arrivalNo.localeCompare(a.arrivalNo),
+  );
+  const itemTotal = deliveries.reduce((sum, delivery) => sum + delivery.itemTotal, 0);
+  const travelTotal = deliveries.reduce((sum, delivery) => sum + delivery.travelCost, 0);
+  const grandTotal = itemTotal + travelTotal;
+
+  const exportExcel = () => {
+    const escape = (value: string | number) => {
+      let text = String(value ?? '');
+      if (/^[=+@]/.test(text)) text = "'" + text;
+      return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+    };
+    const rows: (string | number)[][] = [
+      ['Date', 'Delivery No.', 'Time', 'Saman', 'Mili Qty', 'Actual Rate', 'Saman ka Kharcha', 'Travel Share', 'Aane-Jane ka Kharcha'],
+    ];
+    for (const delivery of deliveries) {
+      delivery.items.forEach((item, index) => rows.push([
+        delivery.date,
+        delivery.arrivalNo,
+        item.arrivalTime || delivery.time,
+        item.item,
+        num(item.qty),
+        num(item.rate),
+        num(item.total),
+        num(item.arrivalTravelShare),
+        index === 0 ? delivery.travelCost : 0,
+      ]));
+    }
+    rows.push([], ['Selected Dates ka Saman Total', '', '', '', '', '', itemTotal], ['Aane-Jane ka Kharcha', '', '', '', '', '', '', '', travelTotal], ['Grand Total', '', '', '', '', '', grandTotal]);
+    saveFile(
+      'office-purchase-report-' + today() + '.csv',
+      new Blob(['\uFEFF' + rows.map((row) => row.map(escape).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }),
+    );
+  };
+
+  const printReport = () => {
+    const root = document.documentElement;
+    const cleanup = () => root.classList.remove('delivery-report-print');
+    root.classList.add('delivery-report-print');
+    window.addEventListener('afterprint', cleanup, { once: true });
+    window.print();
+  };
+
+  return (
+    <section className="card delivery-report" id="delivery-report-print">
+      <header className="card-h">
+        <div>
+          <h2>Purchase aur Travel Report</h2>
+          <p className="muted small">Saman Milne ki Date aur Delivery No. ke hisaab se</p>
+        </div>
+        <div className="delivery-report-actions no-print">
+          <button type="button" className="btn sm" onClick={exportExcel}>
+            <Icon name="dl" /> Excel
+          </button>
+          <button type="button" className="btn sm" onClick={printReport}>
+            <Icon name="print" /> PDF / Print
+          </button>
+        </div>
+      </header>
+
+      <div className="delivery-report-filters no-print">
+        <label className="field">
+          <span>Shuru Date</span>
+          <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Aakhri Date</span>
+          <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+        </label>
+        {(from || to) && (
+          <button type="button" className="btn sm" onClick={() => { setFrom(''); setTo(''); }}>
+            <Icon name="x" /> Date hatao
+          </button>
+        )}
+      </div>
+
+      <div className="sumbar delivery-report-total">
+        <span><b>{deliveries.length}</b> deliveries</span>
+        <span>Saman ka Total <b>{inr(itemTotal)}</b></span>
+        <span>Aane-Jane ka Kharcha <b>{inr(travelTotal)}</b></span>
+        <span className="sum-tot">Grand Total <strong>{inr(grandTotal)}</strong></span>
+      </div>
+
+      {deliveries.length ? (
+        deliveries.map((delivery) => (
+          <section className="delivery-report-group" key={delivery.key}>
+            <header className="delivery-report-heading">
+              <h3>{fdate(delivery.date)} · {delivery.arrivalNo}</h3>
+              <span>{delivery.time || 'Time nahi likha'} · {delivery.items.length} lines</span>
+            </header>
+            <div className="tscroll">
+              <table className="itable delivery-table">
+                <thead>
+                  <tr>
+                    <th>Saman</th>
+                    <th className="num">Mili Qty</th>
+                    <th className="num">Actual Rate</th>
+                    <th className="num">Saman ka Kharcha</th>
+                    <th className="num">Travel Share</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {delivery.items.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.item}</td>
+                      <td className="num">{num(item.qty)}</td>
+                      <td className="num">{inr(num(item.rate))}</td>
+                      <td className="num">{inr(num(item.total))}</td>
+                      <td className="num">{inr(num(item.arrivalTravelShare))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="delivery-report-subtotal">
+              <span>Saman ka Total <b>{inr(delivery.itemTotal)}</b></span>
+              <span>Aane-Jane ka Kharcha <b>{inr(delivery.travelCost)}</b></span>
+              <span>Grand Total <b>{inr(delivery.itemTotal + delivery.travelCost)}</b></span>
+            </div>
+          </section>
+        ))
+      ) : (
+        <p className="none">Chuni hui dates me purchase delivery record nahi mila.</p>
+      )}
+    </section>
+  );
+}
+
 export function HisaabPage() {
   const { items, f, newEntry } = useReg();
   const list = filteredItems(items, f, 'summary');
@@ -1032,6 +1201,7 @@ export function HisaabPage() {
               tone="red"
             />
           </div>
+          <ArrivalPurchaseReport items={items} />
         </>
       )}
     </>

@@ -9,7 +9,7 @@ import { billFileName, billMonth } from './sheet';
 import type { Bill, Item, Me } from './types';
 
 type Job = { kind: 'upsert'; id: string } | { kind: 'delete'; id: string; driveIds: string[] } | { kind: 'trash'; driveId: string };
-export type SyncState = { enabled: boolean; pending: number; running: boolean; lastOk: string; lastErr: string };
+export type SyncState = { enabled: boolean; pending: number; pendingIds: string[]; running: boolean; lastOk: string; lastErr: string };
 
 const QKEY = 'osr-google-queue';
 const DKEY = 'osr-drive-map';
@@ -43,7 +43,14 @@ function writeJson(key: string, v: unknown) {
   }
 }
 const saveQ = () => writeJson(QKEY, q);
-const emit = () => onChange({ enabled, pending: q.length, running, lastOk, lastErr });
+const emit = () => onChange({
+  enabled,
+  pending: q.length,
+  pendingIds: Array.from(new Set(q.filter((j): j is Extract<Job, { kind: 'upsert' }> => j.kind === 'upsert').map((j) => j.id))),
+  running,
+  lastOk,
+  lastErr,
+});
 
 export function syncMessage(code: string): string {
   if (code === 'bad_secret') return 'Google Sheet ka secret galat hai. Vercel me GOOGLE_SCRIPT_SECRET check karo.';
@@ -129,6 +136,7 @@ export function queueEntryDelete(it: Item, items: Item[]) {
 async function run() {
   if (running || !enabled) return;
   running = true;
+  let retryIn = 60_000;
   emit();
   try {
     while (q.length) {
@@ -143,6 +151,10 @@ async function run() {
         emit();
       } catch (e) {
         const c = errCode(e) || 'upstream';
+        if (c === 'not_ready') {
+          retryIn = 1_000;
+          break;
+        }
         if (c === 'bad_request' || c === 'too_large') {
           q.shift(); // ye kabhi nahi jayega, chhod do
           saveQ();
@@ -159,7 +171,7 @@ async function run() {
   } finally {
     running = false;
     emit();
-    if (q.length && enabled) kick(60_000);
+    if (q.length && enabled) kick(retryIn);
   }
 }
 
@@ -173,7 +185,7 @@ async function doJob(job: Job) {
     return;
   }
   const it = getItem(job.id);
-  if (!it) return; // entry ab nahi hai
+  if (!it) throw { code: 'not_ready' };
   await sheetUpsert(await ensureDrive(it));
 }
 

@@ -490,6 +490,21 @@ input[type="radio"]{accent-color:var(--accent)}
 }
 .card-h h2{margin:0;font-size:1rem;font-weight:650}
 .none{color:var(--muted)}
+.receive-lines{display:flex;flex-direction:column;gap:12px}
+.receive-line{padding:14px}
+.receive-line .card-h{min-height:24px}
+.receive-line h3{margin:0}
+.delivery-report{gap:16px}
+.delivery-report-actions,.delivery-report-filters{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.delivery-report-filters .field{min-width:170px}
+.delivery-report-total{gap:8px 18px}
+.delivery-report-group{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+.delivery-report-heading,.delivery-report-subtotal{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.delivery-report-heading h3{margin:0;font-size:.98rem}
+.delivery-report-heading span{color:var(--muted);font-size:.82rem}
+.delivery-report-subtotal{justify-content:flex-end;color:var(--muted);font-size:.84rem}
+.delivery-report-subtotal b{color:var(--ink);margin-left:4px}
+.delivery-table{min-width:620px}
 
 /* DASHBOARD */
 .dashboard-hero{
@@ -1815,6 +1830,28 @@ input.aifilled,textarea.aifilled{
   }
   html.slip-mode .slip-wrap{
     display:block!important;
+  }
+
+  html.delivery-report-print body *{
+    visibility:hidden!important;
+  }
+  html.delivery-report-print #delivery-report-print,
+  html.delivery-report-print #delivery-report-print *{
+    visibility:visible!important;
+  }
+  html.delivery-report-print #delivery-report-print{
+    display:flex!important;position:absolute;left:0;top:0;width:100%;
+    max-width:none;padding:0;border:0;box-shadow:none;background:#fff!important;
+  }
+  html.delivery-report-print .delivery-report-actions,
+  html.delivery-report-print .delivery-report-filters{
+    display:none!important;
+  }
+  html.delivery-report-print .delivery-report-group{
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  html.delivery-report-print .delivery-report-subtotal{
+    border-bottom:1px solid #D3D7E3;padding-bottom:6pt;
   }
 }
   

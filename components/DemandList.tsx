@@ -16,10 +16,11 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { useReg } from './context';
-import { blankItem, inr, nextArrivalNo, num, today } from '@/lib/calc';
+import { blankItem, inr, nextArrivalNo, num, today, uid } from '@/lib/calc';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
 import type { Item } from '@/lib/types';
+import { queueUpsert } from '@/lib/sync';
 
 export interface DemandItem {
   id: string;
@@ -56,6 +57,20 @@ function remainingDemandQty(d: DemandItem): number {
   return Math.max(0, num(d.qty) - receivedQuantity(d));
 }
 
+type ReceiveLine = {
+  key: string;
+  demandId: string;
+  qty: string;
+  actualRate: string;
+  travelShare: string;
+};
+
+type SavedDelivery = {
+  arrivalNo: string;
+  itemIds: string[];
+  queued: boolean;
+};
+
 function cleanUrl(url: string) {
   if (!url) return '';
   try {
@@ -67,15 +82,15 @@ function cleanUrl(url: string) {
 }
 
 export function DemandList() {
-  const { toast, me, items } = useReg();
+  const { toast, me, items, google } = useReg();
 
   const [demands, setDemands] = useState<DemandItem[]>([]);
   const [receivingDemand, setReceivingDemand] = useState<DemandItem | null>(null);
-  const [receiveQty, setReceiveQty] = useState('');
+  const [receiveLines, setReceiveLines] = useState<ReceiveLine[]>([]);
   const [receiveOrderDate, setReceiveOrderDate] = useState(getTodayStr);
   const [receiveDate, setReceiveDate] = useState(getTodayStr);
   const [receiveTime, setReceiveTime] = useState(() => new Date().toTimeString().slice(0, 5));
-  const [receiveRate, setReceiveRate] = useState('');
+  const [receiveTravelCost, setReceiveTravelCost] = useState('');
   const [receiveVendor, setReceiveVendor] = useState('');
   const [receiveBroughtBy, setReceiveBroughtBy] = useState('');
   const [receiveBy, setReceiveBy] = useState('');
@@ -83,6 +98,7 @@ export function DemandList() {
   const [receiveNote, setReceiveNote] = useState('');
   const [receiveError, setReceiveError] = useState('');
   const [receiveSaving, setReceiveSaving] = useState(false);
+  const [savedDelivery, setSavedDelivery] = useState<SavedDelivery | null>(null);
   const receiveLock = useRef(false);
 
   // Add Form
@@ -159,6 +175,13 @@ export function DemandList() {
 
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (!savedDelivery || savedDelivery.queued || !google.enabled) return;
+    if (!savedDelivery.itemIds.every((id) => items.some((item) => item.id === id))) return;
+    savedDelivery.itemIds.forEach(queueUpsert);
+    setSavedDelivery((current) => current && current.arrivalNo === savedDelivery.arrivalNo ? { ...current, queued: true } : current);
+  }, [google.enabled, items, savedDelivery]);
 
   // Add Demand
   async function handleAddDemand(e: React.FormEvent) {
@@ -278,13 +301,19 @@ export function DemandList() {
 
   function openReceiveForm(d: DemandItem) {
     setReceivingDemand(d);
-    setReceiveQty(String(remainingDemandQty(d)));
+    setReceiveLines([{
+      key: uid(),
+      demandId: d.id,
+      qty: String(remainingDemandQty(d)),
+      actualRate: '',
+      travelShare: '',
+    }]);
     setReceiveOrderDate(getTodayStr());
     setReceiveDate(getTodayStr());
     setReceiveTime(new Date().toTimeString().slice(0, 5));
-    setReceiveRate(String(d.rate || ''));
+    setReceiveTravelCost('');
     setReceiveVendor(d.link ? 'Online / Buy Link' : 'Market');
-    setReceiveBroughtBy('');
+    setReceiveBroughtBy(me?.name || '');
     setReceiveBy(me?.name || '');
     setReceiveBillNo('');
     setReceiveNote(d.note || '');
@@ -297,20 +326,54 @@ export function DemandList() {
     setReceiveError('');
   }
 
-  // Save one delivery as its own stock entry and leave any balance pending.
+  function addReceiveLine(demandId: string) {
+    const demand = demands.find((d) => d.id === demandId);
+    if (!demand) return;
+    const alreadyAdded = receiveLines.some((line) => line.demandId === demandId);
+    setReceiveLines((lines) => [...lines, {
+      key: uid(),
+      demandId,
+      qty: alreadyAdded ? '' : String(remainingDemandQty(demand)),
+      actualRate: '',
+      travelShare: '',
+    }]);
+  }
+
+  function updateReceiveLine(key: string, patch: Partial<ReceiveLine>) {
+    setReceiveLines((lines) => lines.map((line) => line.key === key ? { ...line, ...patch } : line));
+  }
+
+  // Save all lines in one delivery; each line has its own stock and Sheet row.
   async function handleReceiveDemand(e: React.FormEvent) {
     e.preventDefault();
     const d = receivingDemand;
     if (!d || receiveLock.current) return;
 
-    const qty = Number(receiveQty);
-    const rate = receiveRate.trim() ? Number(receiveRate) : 0;
-    if (!Number.isFinite(qty) || qty <= 0) {
-      setReceiveError('Is baar aayi quantity sahi se likho.');
+    if (!receiveLines.length) {
+      setReceiveError('Kam se kam ek demand item jodo.');
       return;
     }
-    if (!Number.isFinite(rate) || rate < 0) {
-      setReceiveError('Saman ka rate zero ya usse zyada likho.');
+
+    const lines = receiveLines.map((line) => ({
+      ...line,
+      demand: demands.find((demand) => demand.id === line.demandId),
+      qty: Number(line.qty),
+      rate: line.actualRate.trim() ? Number(line.actualRate) : NaN,
+      travelShare: line.travelShare.trim() ? Number(line.travelShare) : 0,
+    }));
+    const travelCost = receiveTravelCost.trim() ? Number(receiveTravelCost) : 0;
+    const badLine = lines.find((line) => !line.demand || !Number.isFinite(line.qty) || line.qty <= 0 || !Number.isFinite(line.rate) || line.rate < 0 || !Number.isFinite(line.travelShare) || line.travelShare < 0);
+    if (badLine) {
+      setReceiveError('Har line me demand, sahi Mili Qty aur zero ya usse zyada Actual Rate likho.');
+      return;
+    }
+    if (!Number.isFinite(travelCost) || travelCost < 0) {
+      setReceiveError('Aane-jane ka kharcha zero ya usse zyada likho.');
+      return;
+    }
+    const shareTotal = lines.reduce((sum, line) => sum + line.travelShare, 0);
+    if (shareTotal > travelCost + 0.005) {
+      setReceiveError('Item-wise travel share, total Aane-Jane ke kharche se zyada nahi ho sakta.');
       return;
     }
     if (!receiveDate || !receiveTime || !receiveOrderDate) {
@@ -323,30 +386,42 @@ export function DemandList() {
     setReceiveError('');
     try {
       const db = getFirestore();
-      const demandRef = doc(db, 'demands', d.id);
       const sequenceRef = doc(db, 'settings', 'arrival-sequence');
-      const itemRef = doc(collection(db, 'purchases'));
+      const uniqueDemandIds = Array.from(new Set(lines.map((line) => line.demandId)));
+      const demandRefs = new Map(uniqueDemandIds.map((id) => [id, doc(db, 'demands', id)]));
+      const itemRefs = lines.map(() => doc(collection(db, 'purchases')));
       const firstAvailable = Number(nextArrivalNo(items).replace('AWK-', '')) - 1;
       const now = new Date().toISOString();
-      const total = Math.round(qty * rate * 100) / 100;
 
       const result = await runTransaction(db, async (transaction) => {
-        const [demandSnap, sequenceSnap] = await Promise.all([
-          transaction.get(demandRef),
+        const [demandSnaps, sequenceSnap] = await Promise.all([
+          Promise.all(Array.from(demandRefs.values()).map((ref) => transaction.get(ref))),
           transaction.get(sequenceRef),
         ]);
-        if (!demandSnap.exists()) throw new Error('Ye demand list mein nahi mili.');
+        const currentById = new Map<string, Record<string, unknown>>();
+        for (const [index, id] of uniqueDemandIds.entries()) {
+          const snap = demandSnaps[index];
+          if (!snap.exists()) throw new Error('Ek demand list mein nahi mili.');
+          currentById.set(id, snap.data());
+        }
 
-        const current = demandSnap.data();
-        const requested = Math.max(0, num(current.qty));
-        const currentReceived = Number.isFinite(current.receivedQty)
-          ? Math.max(0, num(current.receivedQty))
-          : current.status === 'received'
-            ? requested
-            : 0;
-        const outstanding = Math.max(0, requested - currentReceived);
-        if (outstanding <= 0) throw new Error('Is demand ka saara saman pehle hi aa chuka hai.');
-        if (qty > outstanding) throw new Error(`Is demand me abhi sirf ${outstanding} pcs baaki hain.`);
+        const receivedByDemand = new Map<string, number>();
+        for (const line of lines) {
+          receivedByDemand.set(line.demandId, (receivedByDemand.get(line.demandId) || 0) + line.qty);
+        }
+        for (const [id, adding] of receivedByDemand) {
+          const current = currentById.get(id);
+          if (!current) throw new Error('Ek demand list mein nahi mili.');
+          const requested = Math.max(0, num(current.qty));
+          const currentReceived = Number.isFinite(current.receivedQty)
+            ? Math.max(0, num(current.receivedQty))
+            : current.status === 'received'
+              ? requested
+              : 0;
+          const outstanding = Math.max(0, requested - currentReceived);
+          if (outstanding <= 0) throw new Error(`${String(current.item || 'Saman')} ki demand pehle hi poori aa chuki hai.`);
+          if (adding > outstanding) throw new Error(`${String(current.item || 'Saman')}: is demand me abhi sirf ${outstanding} pcs baaki hain.`);
+        }
 
         const lastNumber = Math.max(
           firstAvailable,
@@ -354,42 +429,71 @@ export function DemandList() {
         );
         const serial = lastNumber + 1;
         const arrivalNo = `AWK-${String(serial).padStart(4, '0')}`;
-        const received = currentReceived + qty;
-        const complete = received >= requested;
-        const purchase: Item = {
-          ...blankItem(itemRef.id, me),
-          arrivalNo,
-          arrivalTime: receiveTime,
-          arrivalMode: 'demand',
-          demandId: d.id,
-          item: String(current.item || d.item).trim(),
-          category: String(current.category || d.category || 'General'),
-          qty,
-          rate,
-          total,
-          orderDate: receiveOrderDate,
-          receivedDate: receiveDate,
-          vendor: receiveVendor.trim(),
-          broughtBy: receiveBroughtBy.trim(),
-          receivedBy: receiveBy.trim(),
-          billNo: receiveBillNo.trim(),
-          note: receiveNote.trim(),
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        transaction.set(itemRef, purchase);
-        transaction.update(demandRef, {
-          receivedQty: received,
-          status: complete ? 'received' : 'pending',
-          updatedAt: now,
+        const purchases: Item[] = lines.map((line, index) => {
+          const current = currentById.get(line.demandId)!;
+          const demand = line.demand!;
+          return {
+            ...blankItem(itemRefs[index].id, me),
+            arrivalNo,
+            arrivalTime: receiveTime,
+            arrivalMode: 'demand',
+            demandId: line.demandId,
+            arrivalTravelCost: index === 0 ? travelCost : 0,
+            arrivalTravelShare: line.travelShare,
+            item: String(current.item || demand.item).trim(),
+            category: String(current.category || demand.category || 'General'),
+            qty: line.qty,
+            rate: line.rate,
+            total: Math.round(line.qty * line.rate * 100) / 100,
+            orderDate: receiveOrderDate,
+            receivedDate: receiveDate,
+            vendor: receiveVendor.trim(),
+            broughtBy: receiveBroughtBy.trim(),
+            receivedBy: receiveBy.trim(),
+            billNo: receiveBillNo.trim(),
+            note: receiveNote.trim(),
+            createdAt: now,
+            updatedAt: now,
+          };
         });
+        purchases.forEach((purchase, index) => transaction.set(itemRefs[index], purchase));
+        for (const [id, adding] of receivedByDemand) {
+          const current = currentById.get(id)!;
+          const requested = Math.max(0, num(current.qty));
+          const oldReceived = Number.isFinite(current.receivedQty)
+            ? Math.max(0, num(current.receivedQty))
+            : current.status === 'received'
+              ? requested
+              : 0;
+          const received = oldReceived + adding;
+          transaction.update(demandRefs.get(id)!, {
+            receivedQty: received,
+            status: received >= requested ? 'received' : 'pending',
+            updatedAt: now,
+          });
+        }
         transaction.set(sequenceRef, { lastNumber: serial, updatedAt: now });
-        return { arrivalNo, complete, outstanding: requested - received };
+        const outstanding = Array.from(receivedByDemand, ([id, adding]) => {
+          const current = currentById.get(id)!;
+          const oldReceived = Number.isFinite(current.receivedQty)
+            ? Math.max(0, num(current.receivedQty))
+            : current.status === 'received'
+              ? Math.max(0, num(current.qty))
+              : 0;
+          return Math.max(0, num(current.qty) - oldReceived - adding);
+        }).reduce((sum, qty) => sum + qty, 0);
+        return {
+          arrivalNo,
+          itemIds: purchases.map((purchase) => purchase.id),
+          total: purchases.reduce((sum, purchase) => sum + purchase.total, 0) + travelCost,
+          outstanding,
+        };
       });
 
+      result.itemIds.forEach(queueUpsert);
+      setSavedDelivery({ arrivalNo: result.arrivalNo, itemIds: result.itemIds, queued: true });
       setReceivingDemand(null);
-      toast(`"${d.item}" Stock mein jud gaya · ${result.arrivalNo}${result.complete ? ' · Demand poori aa gayi' : ` · ${result.outstanding} pcs baaki`}`);
+      toast(`Delivery ${result.arrivalNo} Stock mein jud gayi · Total ${inr(result.total)}${result.outstanding ? ` · ${result.outstanding} pcs demand baaki` : ''}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Stock mein add nahi ho paya.';
       setReceiveError(message);
@@ -424,6 +528,12 @@ export function DemandList() {
   const receivedList = filteredDemands.filter(
     (d) => remainingDemandQty(d) <= 0
   );
+
+  const receiveItemsTotal = receiveLines.reduce(
+    (sum, line) => sum + Math.round(num(line.qty) * num(line.actualRate) * 100) / 100,
+    0,
+  );
+  const receiveTravelPreview = Math.max(0, num(receiveTravelCost));
 
   const grandTotal = pendingList.reduce(
     (sum, d) => sum + remainingDemandQty(d) * (d.rate || 0),
@@ -2014,6 +2124,39 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
         </details>
       )}
 
+      {(savedDelivery || (google.enabled && (google.sync.pending > 0 || google.sync.lastErr))) && (
+        <div className="notice no-print" role="status">
+          {savedDelivery && <><strong>{savedDelivery.arrivalNo}</strong>{' · '}</>}
+          {!google.enabled
+            ? 'Google Sheet sync chalu nahi hai.'
+            : savedDelivery?.itemIds.some((id) => google.sync.pendingIds.includes(id))
+              ? google.sync.running
+                ? 'Google Sheet me sync ho raha hai…'
+                : google.sync.lastErr
+                  ? 'Google Sheet sync pending hai; retry kar sakte hain.'
+                  : 'Google Sheet sync pending hai.'
+                : savedDelivery && google.sync.pendingIds.length > 0
+                  ? 'Is delivery ka sync ho gaya; doosri Sheet entries pending hain.'
+                  : !savedDelivery && google.sync.pendingIds.length > 0
+                    ? google.sync.running
+                      ? 'Google Sheet me sync ho raha hai…'
+                      : google.sync.lastErr
+                        ? 'Google Sheet sync pending hai; retry kar sakte hain.'
+                        : 'Google Sheet sync pending hai.'
+                : google.sync.lastErr
+                  ? 'Google Sheet sync me dikkat hai.'
+                : savedDelivery?.queued
+                  ? 'Google Sheet me sync ho gaya.'
+                  : 'Google Sheet sync ke liye entries load ho rahi hain…'}
+          {google.enabled && google.sync.pendingIds.length > 0 && (
+            <button type="button" className="btn sm" style={{ marginLeft: 10 }} onClick={() => google.sync.pendingIds.forEach(queueUpsert)}>
+              <Icon name="undo" />
+              Sheet retry
+            </button>
+          )}
+        </div>
+      )}
+
       <Dialog
         open={!!receivingDemand}
         onClose={closeReceiveForm}
@@ -2034,64 +2177,26 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
             </div>
 
             <div className="mbody">
-              <div className="calcbox">
-                <span className="eq">
-                  Mangaya <b>{num(receivingDemand.qty)} pcs</b>
-                  {' · '}Aa chuka <b>{receivedQuantity(receivingDemand)} pcs</b>
-                  {' · '}Baaki <b>{remainingDemandQty(receivingDemand)} pcs</b>
-                </span>
-              </div>
-
               <div className="fgrid">
-                <div className="field span2">
-                  <label htmlFor="receive-item">Saman</label>
-                  <input id="receive-item" value={receivingDemand.item} readOnly />
-                </div>
-                <div className="field">
-                  <label htmlFor="receive-qty">Is baar kitna aaya *</label>
-                  <input
-                    id="receive-qty"
-                    type="number"
-                    min="0.01"
-                    max={remainingDemandQty(receivingDemand)}
-                    step="any"
-                    value={receiveQty}
-                    onChange={(e) => setReceiveQty(e.target.value)}
-                    required
-                    autoFocus
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="receive-rate">Rate (₹ per piece)</label>
-                  <input
-                    id="receive-rate"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={receiveRate}
-                    onChange={(e) => setReceiveRate(e.target.value)}
-                  />
-                  <span className="hint">Is baar ka saman: {inr(num(receiveQty) * num(receiveRate))}</span>
-                </div>
                 <div className="field">
                   <label htmlFor="receive-order-date">Kab kharida</label>
                   <input id="receive-order-date" type="date" value={receiveOrderDate} onChange={(e) => setReceiveOrderDate(e.target.value)} />
                 </div>
                 <div className="field">
-                  <label htmlFor="receive-date">Kab office pahuncha</label>
-                  <input id="receive-date" type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} />
+                  <label htmlFor="receive-date">Saman Milne ki Date</label>
+                  <input id="receive-date" type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} required />
                 </div>
                 <div className="field">
                   <label htmlFor="receive-time">Pahunchne ka samay</label>
-                  <input id="receive-time" type="time" value={receiveTime} onChange={(e) => setReceiveTime(e.target.value)} />
+                  <input id="receive-time" type="time" value={receiveTime} onChange={(e) => setReceiveTime(e.target.value)} required />
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-brought-by">Kisne Laya</label>
+                  <input id="receive-brought-by" value={receiveBroughtBy} onChange={(e) => setReceiveBroughtBy(e.target.value)} />
                 </div>
                 <div className="field">
                   <label htmlFor="receive-vendor">Dukaan / Supplier</label>
                   <input id="receive-vendor" value={receiveVendor} onChange={(e) => setReceiveVendor(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label htmlFor="receive-brought-by">Kaun lekar aaya</label>
-                  <input id="receive-brought-by" value={receiveBroughtBy} onChange={(e) => setReceiveBroughtBy(e.target.value)} />
                 </div>
                 <div className="field">
                   <label htmlFor="receive-by">Office me kisne liya</label>
@@ -2101,10 +2206,79 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                   <label htmlFor="receive-bill">Bill number</label>
                   <input id="receive-bill" value={receiveBillNo} onChange={(e) => setReceiveBillNo(e.target.value)} />
                 </div>
-                <div className="field span2">
-                  <label htmlFor="receive-note">Note</label>
-                  <textarea id="receive-note" rows={2} value={receiveNote} onChange={(e) => setReceiveNote(e.target.value)} placeholder="Koi saman abhi aana baaki ho to likhein…" />
+                <div className="field">
+                  <label htmlFor="receive-travel">Aane-Jane ka Kharcha</label>
+                  <input id="receive-travel" type="number" min="0" step="0.01" value={receiveTravelCost} onChange={(e) => setReceiveTravelCost(e.target.value)} placeholder="₹" />
+                  <span className="hint">Travel Share isi kharche ka batwara hai; Grand Total me dobara nahi judta.</span>
                 </div>
+              </div>
+
+              <section className="receive-lines">
+                <div className="card-h">
+                  <h3>Saman ki lines</h3>
+                  <span className="muted small">Estimate reference hai; actual rate alag bharo.</span>
+                </div>
+                {receiveLines.map((line, index) => {
+                  const demand = demands.find((candidate) => candidate.id === line.demandId);
+                  const otherQty = receiveLines.filter((candidate) => candidate.demandId === line.demandId && candidate.key !== line.key).reduce((sum, candidate) => sum + Math.max(0, num(candidate.qty)), 0);
+                  const available = demand ? Math.max(0, remainingDemandQty(demand) - otherQty) : 0;
+                  const lineTotal = Math.round(num(line.qty) * num(line.actualRate) * 100) / 100;
+                  return (
+                    <div className="card receive-line" key={line.key}>
+                      <div className="card-h">
+                        <strong>{demand?.item || 'Demand item'}</strong>
+                        <button type="button" className="iconbtn sm" onClick={() => setReceiveLines((all) => all.filter((candidate) => candidate.key !== line.key))} aria-label="Ye line hatao" disabled={receiveLines.length === 1}>
+                          <Icon name="x" />
+                        </button>
+                      </div>
+                      <p className="hint">
+                        Mangaya {num(demand?.qty)} · Pehle aa chuka {demand ? receivedQuantity(demand) : 0} · Estimated Rate {inr(num(demand?.rate))} / piece · Ab available {available}
+                      </p>
+                      <div className="fgrid">
+                        <div className="field">
+                          <label htmlFor={`receive-qty-${line.key}`}>Mili Qty</label>
+                          <input id={`receive-qty-${line.key}`} type="number" min="0.01" max={available} step="any" value={line.qty} onChange={(e) => updateReceiveLine(line.key, { qty: e.target.value })} required />
+                        </div>
+                        <div className="field">
+                          <label htmlFor={`receive-rate-${line.key}`}>Actual Rate per Piece</label>
+                          <input id={`receive-rate-${line.key}`} type="number" min="0" step="0.01" value={line.actualRate} onChange={(e) => updateReceiveLine(line.key, { actualRate: e.target.value })} required />
+                        </div>
+                        <div className="field">
+                          <label htmlFor={`receive-share-${line.key}`}>Travel Share (optional)</label>
+                          <input id={`receive-share-${line.key}`} type="number" min="0" step="0.01" value={line.travelShare} onChange={(e) => updateReceiveLine(line.key, { travelShare: e.target.value })} placeholder="₹" />
+                        </div>
+                        <div className="field">
+                          <span className="flabel">Saman ka Kharcha</span>
+                          <strong className="num">{inr(lineTotal)}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {demands.some((demand) => remainingDemandQty(demand) > 0) && (
+                  <div className="field">
+                    <label htmlFor="receive-add-demand">Isi delivery me ek aur demand item jodo</label>
+                    <select id="receive-add-demand" value="" onChange={(e) => { if (e.target.value) addReceiveLine(e.target.value); }}>
+                      <option value="">Demand item chuno…</option>
+                      {demands.filter((demand) => remainingDemandQty(demand) > 0).map((demand) => <option key={demand.id} value={demand.id}>{demand.item} · Baaki {remainingDemandQty(demand)}</option>)}
+                    </select>
+                    <span className="hint">Same item ko do alag rate par mila ho to use dobara chuno.</span>
+                  </div>
+                )}
+              </section>
+
+              <div className="calcbox">
+                <span className="eq">
+                  Saman ka Total <b>{inr(receiveItemsTotal)}</b>
+                  {' · '}Aane-Jane ka Kharcha <b>{inr(receiveTravelPreview)}</b>
+                  {' · '}Grand Total <b>{inr(receiveItemsTotal + receiveTravelPreview)}</b>
+                </span>
+              </div>
+
+              <div className="field">
+                <label htmlFor="receive-note">Note</label>
+                <textarea id="receive-note" rows={2} value={receiveNote} onChange={(e) => setReceiveNote(e.target.value)} placeholder="Koi saman abhi aana baaki ho to likhein…" />
               </div>
               {receiveError && <p className="ferr" role="alert">{receiveError}</p>}
             </div>

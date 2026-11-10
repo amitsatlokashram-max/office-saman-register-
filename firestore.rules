@@ -40,6 +40,11 @@ service cloud.firestore {
       allow read, write: if isMember();
     }
 
+    // Demand List / Orders
+    match /demands/{id} {
+      allow read, write: if isMember();
+    }
+
     // Kam se kam stock wali setting
     match /settings/{id} {
       allow read, write: if isMember();
