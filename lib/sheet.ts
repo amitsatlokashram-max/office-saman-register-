@@ -43,6 +43,7 @@ export const SAMAN_COLS: [string, string][] = [
   ['Demand ID', TEXT],
   ['Mili Qty', INT],
   ['Actual Rate (₹)', MONEY],
+  ['Online Price / Piece (₹)', MONEY],
   ['Item Amount (₹)', MONEY],
 ];
 
@@ -112,6 +113,7 @@ export function itemRow(it: Item): Cell[] {
     it.demandId,
     it.arrivalNo ? num(it.qty) : '',
     it.arrivalNo ? num(it.rate) : '',
+    it.arrivalNo && it.onlineRate > 0 ? num(it.onlineRate) : '',
     it.arrivalNo ? num(it.total) : '',
   ];
 }

@@ -140,7 +140,7 @@ export function blankItem(id: string, me: Me | null): Item {
   return {
     id,
     arrivalNo: '', arrivalTime: new Date().toTimeString().slice(0, 5), arrivalMode: 'unknown', demandId: '', arrivalTravelCost: 0, arrivalTravelShare: 0, receivedBy: '',
-    item: '', category: '', qty: 1, rate: 0, total: 0,
+    item: '', category: '', qty: 1, onlineRate: 0, rate: 0, total: 0,
     orderDate: today(), receivedDate: '', vendor: '', broughtBy: '', billNo: '', note: '',
     serials: '', warrantyTill: '',
     iPaid: false, myPaid: 0, myBack: 0, myBackDate: '',
@@ -167,7 +167,7 @@ export function normalizeItem(id: string, d: Record<string, unknown>): Item {
       description: typeof expense.description === 'string' ? expense.description : '',
       amount: num(expense.amount),
     })) } : {}), arrivalTravelCost: num(d.arrivalTravelCost), arrivalTravelShare: num(d.arrivalTravelShare), receivedBy: s('receivedBy') || '',
-    item: s('item'), category: s('category'), qty: num(d.qty), rate: num(d.rate), total: num(d.total),
+    item: s('item'), category: s('category'), qty: num(d.qty), onlineRate: num(d.onlineRate), rate: num(d.rate), total: num(d.total),
     orderDate: s('orderDate'), receivedDate: s('receivedDate'), vendor: s('vendor'), broughtBy: s('broughtBy'),
     billNo: s('billNo'), note: s('note'), serials: s('serials'), warrantyTill: s('warrantyTill'),
     iPaid: d.iPaid === true, myPaid: num(d.myPaid), myBack: num(d.myBack), myBackDate: s('myBackDate'),

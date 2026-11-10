@@ -44,6 +44,7 @@ export type Item = {
   item: string;
   category: string;
   qty: number;
+  onlineRate: number;
   rate: number;
   total: number;
   orderDate: string;

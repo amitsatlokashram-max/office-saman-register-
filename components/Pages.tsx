@@ -913,7 +913,7 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
       return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
     };
     const rows: (string | number)[][] = [
-      ['Date', 'Delivery No.', 'Record Type', 'Time', 'Saman / Expense Type', 'Mili Qty', 'Actual Rate', 'Item Amount', 'Kisne Saman Laya', 'Expense Details', 'Trip Expense'],
+      ['Date', 'Delivery No.', 'Record Type', 'Time', 'Saman / Expense Type', 'Mili Qty', 'Online Price / Piece', 'Actual Rate / Piece', 'Item Amount', 'Kisne Saman Laya', 'Expense Details', 'Trip Expense'],
     ];
     for (const delivery of deliveries) {
       delivery.items.forEach((item) => rows.push([
@@ -923,6 +923,7 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
         item.arrivalTime || delivery.time,
         item.item,
         num(item.qty),
+        item.onlineRate > 0 ? num(item.onlineRate) : '',
         num(item.rate),
         num(item.total),
         item.broughtBy,
@@ -938,6 +939,7 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
         '',
         '',
         '',
+        '',
         expense.broughtBy,
         expense.description,
         num(expense.amount),
@@ -945,9 +947,9 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
     }
     rows.push(
       [],
-      ['Selected Dates ka Item Purchase Total', '', '', '', '', '', '', itemTotal],
-      ['Selected Dates ka Trip Expense Total', '', '', '', '', '', '', '', '', '', expenseTotal],
-      ['Grand Total', '', '', '', '', '', '', grandTotal + expenseTotal],
+      ['Selected Dates ka Item Purchase Total', '', '', '', '', '', '', '', itemTotal],
+      ['Selected Dates ka Trip Expense Total', '', '', '', '', '', '', '', '', '', '', expenseTotal],
+      ['Grand Total', '', '', '', '', '', '', '', grandTotal],
     );
     saveFile(
       'office-purchase-expense-report-' + today() + '.csv',
@@ -1019,6 +1021,7 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
                       <tr>
                         <th>Saman</th>
                         <th className="num">Mili Qty</th>
+                        <th className="num">Online Price / Piece</th>
                         <th className="num">Actual Rate</th>
                         <th className="num">Item Amount</th>
                       </tr>
@@ -1028,6 +1031,7 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
                         <tr key={item.id}>
                           <td>{item.item}</td>
                           <td className="num">{num(item.qty)}</td>
+                          <td className="num">{item.onlineRate > 0 ? inr(num(item.onlineRate)) : '—'}</td>
                           <td className="num">{inr(num(item.rate))}</td>
                           <td className="num">{inr(num(item.total))}</td>
                         </tr>

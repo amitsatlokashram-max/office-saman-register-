@@ -17,9 +17,11 @@ import {
 } from 'firebase/firestore';
 import { useReg } from './context';
 import { blankItem, inr, nextArrivalNo, num, today, uid } from '@/lib/calc';
+import { delBill, uploadBill } from '@/lib/bills';
+import { explainUpload } from '@/lib/messages';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
-import type { Item, TripExpense } from '@/lib/types';
+import type { Bill, Item, TripExpense } from '@/lib/types';
 import { queueUpsert } from '@/lib/sync';
 
 export interface DemandItem {
@@ -28,6 +30,7 @@ export interface DemandItem {
   category?: string;
   qty: number;
   rate?: number;
+  onlinePrice?: number;
   link?: string;
   note?: string;
   status: 'pending' | 'received';
@@ -61,6 +64,7 @@ type ReceiveLine = {
   key: string;
   demandId: string;
   qty: string;
+  onlinePrice: string;
   actualRate: string;
 };
 
@@ -103,11 +107,20 @@ export function DemandList() {
   const [receiveBroughtBy, setReceiveBroughtBy] = useState('');
   const [receiveBy, setReceiveBy] = useState('');
   const [receiveBillNo, setReceiveBillNo] = useState('');
+  const [receiveBills, setReceiveBills] = useState<Bill[]>([]);
+  const receiveBillsRef = useRef<Bill[]>([]);
+  const [receiveBillUploading, setReceiveBillUploading] = useState(false);
+  const receiveBillUploadLock = useRef(false);
+  const receiveBillInputRef = useRef<HTMLInputElement>(null);
   const [receiveNote, setReceiveNote] = useState('');
   const [receiveError, setReceiveError] = useState('');
   const [receiveSaving, setReceiveSaving] = useState(false);
   const [savedDelivery, setSavedDelivery] = useState<SavedDelivery | null>(null);
   const receiveLock = useRef(false);
+
+  useEffect(() => () => {
+    receiveBillsRef.current.forEach((bill) => delBill(bill.id));
+  }, []);
 
   // Add Form
   const [item, setItem] = useState('');
@@ -313,6 +326,7 @@ export function DemandList() {
       key: uid(),
       demandId: d.id,
       qty: String(remainingDemandQty(d)),
+      onlinePrice: String(d.onlinePrice || d.rate || ''),
       actualRate: '',
     }]);
     setReceiveOrderDate(getTodayStr());
@@ -324,12 +338,47 @@ export function DemandList() {
     setReceiveBroughtBy(me?.name || '');
     setReceiveBy(me?.name || '');
     setReceiveBillNo('');
+    receiveBillsRef.current = [];
+    setReceiveBills([]);
     setReceiveNote(d.note || '');
     setReceiveError('');
   }
 
+  function setDeliveryBills(bills: Bill[]) {
+    receiveBillsRef.current = bills;
+    setReceiveBills(bills);
+  }
+
+  async function handleReceiveBillFiles(files: File[]) {
+    if (!files.length || receiveBillUploadLock.current) return;
+    receiveBillUploadLock.current = true;
+    setReceiveBillUploading(true);
+    setReceiveError('');
+    let uploadError: unknown = null;
+    for (const file of files) {
+      try {
+        const { bill } = await uploadBill(file, me);
+        setDeliveryBills([...receiveBillsRef.current, bill]);
+      } catch (error) {
+        uploadError = error;
+        break;
+      }
+    }
+    receiveBillUploadLock.current = false;
+    setReceiveBillUploading(false);
+    if (uploadError) setReceiveError(explainUpload(uploadError));
+  }
+
+  function removeReceiveBill(id: string) {
+    setDeliveryBills(receiveBillsRef.current.filter((bill) => bill.id !== id));
+    delBill(id);
+  }
+
   function closeReceiveForm() {
-    if (receiveLock.current) return;
+    if (receiveLock.current || receiveBillUploadLock.current) return;
+    receiveBillsRef.current.forEach((bill) => delBill(bill.id));
+    receiveBillsRef.current = [];
+    setReceiveBills([]);
     setReceivingDemand(null);
     setReceiveError('');
   }
@@ -342,6 +391,7 @@ export function DemandList() {
       key: uid(),
       demandId,
       qty: alreadyAdded ? '' : String(remainingDemandQty(demand)),
+      onlinePrice: String(demand.onlinePrice || demand.rate || ''),
       actualRate: '',
     }]);
   }
@@ -370,6 +420,10 @@ export function DemandList() {
     const d = receivingDemand;
     if (!d || receiveLock.current) return;
 
+    if (receiveBillUploadLock.current) {
+      setReceiveError('Bill upload hone do, phir delivery save karo.');
+      return;
+    }
     if (!receiveLines.length) {
       setReceiveError('Kam se kam ek demand item jodo.');
       return;
@@ -379,6 +433,7 @@ export function DemandList() {
       ...line,
       demand: demands.find((demand) => demand.id === line.demandId),
       qty: Number(line.qty),
+      onlineRate: line.onlinePrice.trim() ? Number(line.onlinePrice) : 0,
       rate: line.actualRate.trim() ? Number(line.actualRate) : NaN,
     }));
     const expenses = hasTripExpenses ? receiveExpenses.map((expense) => ({
@@ -386,9 +441,9 @@ export function DemandList() {
       amount: Number(expense.amount),
       description: expense.description.trim(),
     })) : [];
-    const badLine = lines.find((line) => !line.demand || !Number.isFinite(line.qty) || line.qty <= 0 || !Number.isFinite(line.rate) || line.rate < 0);
+    const badLine = lines.find((line) => !line.demand || !Number.isFinite(line.qty) || line.qty <= 0 || !Number.isFinite(line.onlineRate) || line.onlineRate < 0 || !Number.isFinite(line.rate) || line.rate < 0);
     if (badLine) {
-      setReceiveError('Har line me demand, sahi Mili Qty aur zero ya usse zyada Actual Rate likho.');
+      setReceiveError('Har line me demand, Mili Qty aur Online Price / Actual Rate zero ya usse zyada sahi likho.');
       return;
     }
     if (hasTripExpenses && (!expenses.length || expenses.some((expense) =>
@@ -474,8 +529,10 @@ export function DemandList() {
             item: String(current.item || demand.item).trim(),
             category: String(current.category || demand.category || 'General'),
             qty: line.qty,
+            onlineRate: line.onlineRate,
             rate: line.rate,
             total: Math.round(line.qty * line.rate * 100) / 100,
+            bills: receiveBills.map((bill) => ({ ...bill })),
             orderDate: receiveOrderDate,
             receivedDate: receiveDate,
             vendor: receiveVendor.trim(),
@@ -523,6 +580,8 @@ export function DemandList() {
 
       result.itemIds.forEach(queueUpsert);
       setSavedDelivery({ arrivalNo: result.arrivalNo, itemIds: result.itemIds, queued: true });
+      receiveBillsRef.current = [];
+      setReceiveBills([]);
       setReceivingDemand(null);
       toast(`Delivery ${result.arrivalNo} Stock mein jud gayi · Total ${inr(result.total)}${result.outstanding ? ` · ${result.outstanding} pcs demand baaki` : ''}`);
     } catch (error) {
@@ -2204,7 +2263,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                 <h2 id="receiveDemandTitle">Saman Aa Gaya</h2>
                 <p className="msub">Is demand ki is baar aayi quantity ko alag AWK entry me save karo.</p>
               </div>
-              <button type="button" className="iconbtn" onClick={closeReceiveForm} aria-label="Band karo" disabled={receiveSaving}>
+              <button type="button" className="iconbtn" onClick={closeReceiveForm} aria-label="Band karo" disabled={receiveSaving || receiveBillUploading}>
                 <Icon name="x" />
               </button>
             </div>
@@ -2240,6 +2299,36 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                   <input id="receive-bill" value={receiveBillNo} onChange={(e) => setReceiveBillNo(e.target.value)} />
                 </div>
               </div>
+              <div className="field">
+                <button type="button" className="btn sm" onClick={() => receiveBillInputRef.current?.click()} disabled={receiveBillUploading || receiveSaving}>
+                  <Icon name="clip" />
+                  {receiveBillUploading ? 'Bill upload ho raha…' : '+ Bill Lagao'}
+                </button>
+                <input
+                  ref={receiveBillInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    e.target.value = '';
+                    void handleReceiveBillFiles(files);
+                  }}
+                />
+                {receiveBills.length > 0 && (
+                  <div className="receive-bill-list">
+                    {receiveBills.map((bill) => (
+                      <div className="uitem" key={bill.id}>
+                        <span className="nm">{bill.name}</span>
+                        <button type="button" className="iconbtn sm" onClick={() => removeReceiveBill(bill.id)} aria-label="Ye bill hatao" disabled={receiveSaving || receiveBillUploading}>
+                          <Icon name="x" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <section className="receive-lines">
                 <div className="card-h">
@@ -2268,7 +2357,12 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                           <input id={`receive-qty-${line.key}`} type="number" min="0.01" max={available} step="any" value={line.qty} onChange={(e) => updateReceiveLine(line.key, { qty: e.target.value })} required />
                         </div>
                         <div className="field">
-                          <label htmlFor={`receive-rate-${line.key}`}>Actual Rate per Piece</label>
+                          <label htmlFor={`receive-online-price-${line.key}`}>Online Price / Piece</label>
+                          <input id={`receive-online-price-${line.key}`} type="number" min="0" step="0.01" value={line.onlinePrice} onChange={(e) => updateReceiveLine(line.key, { onlinePrice: e.target.value })} placeholder="Optional" />
+                          {demand?.link && <a href={demand.link} target="_blank" rel="noreferrer">Buy Link kholo</a>}
+                        </div>
+                        <div className="field">
+                          <label htmlFor={`receive-rate-${line.key}`}>Actual Rate / Piece</label>
                           <input id={`receive-rate-${line.key}`} type="number" min="0" step="0.01" value={line.actualRate} onChange={(e) => updateReceiveLine(line.key, { actualRate: e.target.value })} required />
                         </div>
                         <div className="field">
@@ -2372,8 +2466,8 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
             </div>
 
             <div className="mfoot">
-              <button type="button" className="btn" onClick={closeReceiveForm} disabled={receiveSaving}>Rehne do</button>
-              <button type="submit" className="btn primary" disabled={receiveSaving}>
+              <button type="button" className="btn" onClick={closeReceiveForm} disabled={receiveSaving || receiveBillUploading}>Rehne do</button>
+              <button type="submit" className="btn primary" disabled={receiveSaving || receiveBillUploading}>
                 <Icon name="check" />
                 {receiveSaving ? 'Save ho raha…' : 'AWK ke saath save karo'}
               </button>
