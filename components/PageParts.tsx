@@ -14,6 +14,8 @@ export function PageHead({
   tab,
   print = true,
   add = true,
+  addLabel = 'Naya saman',
+  addClassName,
   children,
 }: {
   title: string;
@@ -22,6 +24,8 @@ export function PageHead({
   tab?: Tab;
   print?: boolean;
   add?: boolean;
+  addLabel?: string;
+  addClassName?: string;
   children?: ReactNode;
 }) {
   const { me, items, f, exportCsv, printPage, newEntry } = useReg();
@@ -47,9 +51,9 @@ export function PageHead({
           </button>
         )}
         {add && (
-          <button className="btn primary" type="button" id="newBtn" onClick={newEntry}>
+          <button className={'btn primary' + (addClassName ? ' ' + addClassName : '')} type="button" id="newBtn" onClick={newEntry}>
             <Icon name="plus" />
-            Naya saman
+            {addLabel}
           </button>
         )}
       </div>
