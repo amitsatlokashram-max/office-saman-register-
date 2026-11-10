@@ -139,7 +139,7 @@ export function nextArrivalNo(items: Item[]): string {
 export function blankItem(id: string, me: Me | null): Item {
   return {
     id,
-    arrivalNo: '', arrivalTime: new Date().toTimeString().slice(0, 5), arrivalMode: 'unknown', receivedBy: '',
+    arrivalNo: '', arrivalTime: new Date().toTimeString().slice(0, 5), arrivalMode: 'unknown', demandId: '', receivedBy: '',
     item: '', category: '', qty: 1, rate: 0, total: 0,
     orderDate: today(), receivedDate: '', vendor: '', broughtBy: '', billNo: '', note: '',
     serials: '', warrantyTill: '',
@@ -160,7 +160,7 @@ export function normalizeItem(id: string, d: Record<string, unknown>): Item {
   const mt = (t: string): MoveType => (t === 'back' || t === 'vendor' ? t : 'damaged');
   return {
     id,
-    arrivalNo: s('arrivalNo') || s('invoiceNo') || '', arrivalTime: s('arrivalTime') || '', arrivalMode: d.arrivalMode === 'demand' || d.arrivalMode === 'direct' ? d.arrivalMode : 'unknown', receivedBy: s('receivedBy') || '',
+    arrivalNo: s('arrivalNo') || s('invoiceNo') || '', arrivalTime: s('arrivalTime') || '', arrivalMode: d.arrivalMode === 'demand' || d.arrivalMode === 'direct' ? d.arrivalMode : 'unknown', demandId: s('demandId'), receivedBy: s('receivedBy') || '',
     item: s('item'), category: s('category'), qty: num(d.qty), rate: num(d.rate), total: num(d.total),
     orderDate: s('orderDate'), receivedDate: s('receivedDate'), vendor: s('vendor'), broughtBy: s('broughtBy'),
     billNo: s('billNo'), note: s('note'), serials: s('serials'), warrantyTill: s('warrantyTill'),

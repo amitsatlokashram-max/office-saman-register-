@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import {
   getFirestore,
@@ -13,9 +13,13 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  runTransaction,
 } from 'firebase/firestore';
 import { useReg } from './context';
-import { inr } from '@/lib/calc';
+import { blankItem, inr, nextArrivalNo, num, today } from '@/lib/calc';
+import { Dialog } from './Dialog';
+import { Icon } from './Icon';
+import type { Item } from '@/lib/types';
 
 export interface DemandItem {
   id: string;
@@ -26,6 +30,7 @@ export interface DemandItem {
   link?: string;
   note?: string;
   status: 'pending' | 'received';
+  receivedQty?: number;
   createdAt: string;
 }
 
@@ -40,7 +45,16 @@ const CATEGORIES = [
 ];
 
 const getTodayStr = () =>
-  new Date().toLocaleDateString('en-CA');
+  today();
+
+function receivedQuantity(d: DemandItem): number {
+  if (Number.isFinite(d.receivedQty)) return Math.max(0, Number(d.receivedQty));
+  return d.status === 'received' ? Math.max(0, num(d.qty)) : 0;
+}
+
+function remainingDemandQty(d: DemandItem): number {
+  return Math.max(0, num(d.qty) - receivedQuantity(d));
+}
 
 function cleanUrl(url: string) {
   if (!url) return '';
@@ -53,9 +67,23 @@ function cleanUrl(url: string) {
 }
 
 export function DemandList() {
-  const { toast, me } = useReg();
+  const { toast, me, items } = useReg();
 
   const [demands, setDemands] = useState<DemandItem[]>([]);
+  const [receivingDemand, setReceivingDemand] = useState<DemandItem | null>(null);
+  const [receiveQty, setReceiveQty] = useState('');
+  const [receiveOrderDate, setReceiveOrderDate] = useState(getTodayStr);
+  const [receiveDate, setReceiveDate] = useState(getTodayStr);
+  const [receiveTime, setReceiveTime] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [receiveRate, setReceiveRate] = useState('');
+  const [receiveVendor, setReceiveVendor] = useState('');
+  const [receiveBroughtBy, setReceiveBroughtBy] = useState('');
+  const [receiveBy, setReceiveBy] = useState('');
+  const [receiveBillNo, setReceiveBillNo] = useState('');
+  const [receiveNote, setReceiveNote] = useState('');
+  const [receiveError, setReceiveError] = useState('');
+  const [receiveSaving, setReceiveSaving] = useState(false);
+  const receiveLock = useRef(false);
 
   // Add Form
   const [item, setItem] = useState('');
@@ -154,6 +182,7 @@ export function DemandList() {
         link: link.trim(),
         note: note.trim(),
         status: 'pending',
+        receivedQty: 0,
         addedBy: me?.email || '',
         createdAt: new Date().toISOString(),
       });
@@ -233,6 +262,8 @@ export function DemandList() {
           rate: editRate ? Number(editRate) : 0,
           link: editLink.trim(),
           note: editNote.trim(),
+          receivedQty: receivedQuantity(editingItem),
+          status: Number(editQty) > receivedQuantity(editingItem) ? 'pending' : 'received',
         }
       );
 
@@ -245,46 +276,127 @@ export function DemandList() {
     }
   }
 
-  // Receive Demand into Stock
-  async function handleReceiveDemand(d: DemandItem) {
+  function openReceiveForm(d: DemandItem) {
+    setReceivingDemand(d);
+    setReceiveQty(String(remainingDemandQty(d)));
+    setReceiveOrderDate(getTodayStr());
+    setReceiveDate(getTodayStr());
+    setReceiveTime(new Date().toTimeString().slice(0, 5));
+    setReceiveRate(String(d.rate || ''));
+    setReceiveVendor(d.link ? 'Online / Buy Link' : 'Market');
+    setReceiveBroughtBy('');
+    setReceiveBy(me?.name || '');
+    setReceiveBillNo('');
+    setReceiveNote(d.note || '');
+    setReceiveError('');
+  }
+
+  function closeReceiveForm() {
+    if (receiveLock.current) return;
+    setReceivingDemand(null);
+    setReceiveError('');
+  }
+
+  // Save one delivery as its own stock entry and leave any balance pending.
+  async function handleReceiveDemand(e: React.FormEvent) {
+    e.preventDefault();
+    const d = receivingDemand;
+    if (!d || receiveLock.current) return;
+
+    const qty = Number(receiveQty);
+    const rate = receiveRate.trim() ? Number(receiveRate) : 0;
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setReceiveError('Is baar aayi quantity sahi se likho.');
+      return;
+    }
+    if (!Number.isFinite(rate) || rate < 0) {
+      setReceiveError('Saman ka rate zero ya usse zyada likho.');
+      return;
+    }
+    if (!receiveDate || !receiveTime || !receiveOrderDate) {
+      setReceiveError('Kharid aur aane ki tareekh aur samay likhna zaroori hai.');
+      return;
+    }
+
+    receiveLock.current = true;
+    setReceiveSaving(true);
+    setReceiveError('');
     try {
       const db = getFirestore();
+      const demandRef = doc(db, 'demands', d.id);
+      const sequenceRef = doc(db, 'settings', 'arrival-sequence');
+      const itemRef = doc(collection(db, 'purchases'));
+      const firstAvailable = Number(nextArrivalNo(items).replace('AWK-', '')) - 1;
+      const now = new Date().toISOString();
+      const total = Math.round(qty * rate * 100) / 100;
 
-      await addDoc(collection(db, 'purchases'), {
-        item: d.item,
-        category: d.category || 'General',
-        qty: d.qty,
-        rate: d.rate || 0,
-        total: d.qty * (d.rate || 0),
-        orderDate:
-          d.createdAt.slice(0, 10) || getTodayStr(),
-        receivedDate: getTodayStr(),
-        vendor: d.link
-          ? 'Online / Buy Link'
-          : 'Market',
-        broughtBy: me?.email || 'Office',
-        note: `Demand list se auto-added. ${
-          d.link ? 'Link: ' + d.link : ''
-        } ${
-          d.note ? 'Note: ' + d.note : ''
-        }`.trim(),
-        bills: [],
-        issues: [],
-        moves: [],
-        addedBy: me?.email || '',
-        createdAt: new Date().toISOString(),
+      const result = await runTransaction(db, async (transaction) => {
+        const [demandSnap, sequenceSnap] = await Promise.all([
+          transaction.get(demandRef),
+          transaction.get(sequenceRef),
+        ]);
+        if (!demandSnap.exists()) throw new Error('Ye demand list mein nahi mili.');
+
+        const current = demandSnap.data();
+        const requested = Math.max(0, num(current.qty));
+        const currentReceived = Number.isFinite(current.receivedQty)
+          ? Math.max(0, num(current.receivedQty))
+          : current.status === 'received'
+            ? requested
+            : 0;
+        const outstanding = Math.max(0, requested - currentReceived);
+        if (outstanding <= 0) throw new Error('Is demand ka saara saman pehle hi aa chuka hai.');
+        if (qty > outstanding) throw new Error(`Is demand me abhi sirf ${outstanding} pcs baaki hain.`);
+
+        const lastNumber = Math.max(
+          firstAvailable,
+          Math.max(0, Math.floor(num(sequenceSnap.data()?.lastNumber))),
+        );
+        const serial = lastNumber + 1;
+        const arrivalNo = `AWK-${String(serial).padStart(4, '0')}`;
+        const received = currentReceived + qty;
+        const complete = received >= requested;
+        const purchase: Item = {
+          ...blankItem(itemRef.id, me),
+          arrivalNo,
+          arrivalTime: receiveTime,
+          arrivalMode: 'demand',
+          demandId: d.id,
+          item: String(current.item || d.item).trim(),
+          category: String(current.category || d.category || 'General'),
+          qty,
+          rate,
+          total,
+          orderDate: receiveOrderDate,
+          receivedDate: receiveDate,
+          vendor: receiveVendor.trim(),
+          broughtBy: receiveBroughtBy.trim(),
+          receivedBy: receiveBy.trim(),
+          billNo: receiveBillNo.trim(),
+          note: receiveNote.trim(),
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        transaction.set(itemRef, purchase);
+        transaction.update(demandRef, {
+          receivedQty: received,
+          status: complete ? 'received' : 'pending',
+          updatedAt: now,
+        });
+        transaction.set(sequenceRef, { lastNumber: serial, updatedAt: now });
+        return { arrivalNo, complete, outstanding: requested - received };
       });
 
-      await updateDoc(
-        doc(db, 'demands', d.id),
-        { status: 'received' }
-      );
-
-      toast(
-        `"${d.item}" main Stock register mein jud gaya!`
-      );
-    } catch {
-      toast('Stock mein add nahi ho paya.');
+      setReceivingDemand(null);
+      toast(`"${d.item}" Stock mein jud gaya · ${result.arrivalNo}${result.complete ? ' · Demand poori aa gayi' : ` · ${result.outstanding} pcs baaki`}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Stock mein add nahi ho paya.';
+      setReceiveError(message);
+      toast(message);
+    } finally {
+      receiveLock.current = false;
+      setReceiveSaving(false);
     }
   }
 
@@ -306,15 +418,15 @@ export function DemandList() {
   });
 
   const pendingList = filteredDemands.filter(
-    (d) => d.status === 'pending'
+    (d) => remainingDemandQty(d) > 0
   );
 
   const receivedList = filteredDemands.filter(
-    (d) => d.status === 'received'
+    (d) => remainingDemandQty(d) <= 0
   );
 
   const grandTotal = pendingList.reduce(
-    (sum, d) => sum + d.qty * (d.rate || 0),
+    (sum, d) => sum + remainingDemandQty(d) * (d.rate || 0),
     0
   );
 
@@ -327,12 +439,13 @@ export function DemandList() {
 
     const text = pendingList
       .map(
-        (d, i) =>
-          `${i + 1}. *${d.item}* [${
+        (d, i) => {
+          const outstanding = remainingDemandQty(d);
+          return `${i + 1}. *${d.item}* [${
             d.category || 'General'
-          }]\n   Qty: ${d.qty} pcs${
+          }]\n   Qty: ${outstanding} pcs${
             d.rate
-              ? ` | Est: ₹${d.rate * d.qty}`
+              ? ` | Est: ₹${d.rate * outstanding}`
               : ''
           }${
             d.link
@@ -342,7 +455,8 @@ export function DemandList() {
             d.note
               ? `\n   Note: ${d.note}`
               : ''
-          }`
+          }`;
+        }
       )
       .join('\n\n');
 
@@ -407,19 +521,15 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
   );
 
   const selectedPdfTotal = selectedPdfItems.reduce(
-    (sum, d) => sum + d.qty * (d.rate || 0),
+    (sum, d) => sum + remainingDemandQty(d) * (d.rate || 0),
     0
   );
 
   // Only these items go into PDF
-  const printableItems = filteredDemands.filter(
-    (d) =>
-      d.status === 'pending' &&
-      printedIds.includes(d.id)
-  );
+  const printableItems = pendingList.filter((d) => printedIds.includes(d.id));
 
   const printableTotal = printableItems.reduce(
-    (sum, d) => sum + d.qty * (d.rate || 0),
+    (sum, d) => sum + remainingDemandQty(d) * (d.rate || 0),
     0
   );
 
@@ -1126,9 +1236,9 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                         marginTop: '4px',
                       }}
                     >
-                      {d.category || 'General'} | Qty: {d.qty}
+                      {d.category || 'General'} | Qty: {remainingDemandQty(d)} baaki
                       {d.rate
-                        ? ` | Est: ${inr(d.rate * d.qty)}`
+                        ? ` | Est: ${inr(d.rate * remainingDemandQty(d))}`
                         : ''}
                     </div>
                   </div>
@@ -1496,7 +1606,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                     textAlign: 'center',
                   }}
                 >
-                  {d.qty}
+                  {remainingDemandQty(d)}
                 </td>
 
                 <td
@@ -1515,7 +1625,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                   }}
                 >
                   {d.rate
-                    ? `₹${d.rate * d.qty}`
+                    ? `₹${d.rate * remainingDemandQty(d)}`
                     : '—'}
                 </td>
 
@@ -1689,7 +1799,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                       color: '#94a3b8',
                     }}
                   >
-                    Qty:
+                    Mangaya:
                   </span>{' '}
                   <strong
                     style={{
@@ -1698,6 +1808,15 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                   >
                     {d.qty} pcs
                   </strong>
+                  {receivedQuantity(d) > 0 && (
+                    <>
+                      <span style={{ marginLeft: '12px', color: '#94a3b8' }}>Aa chuka:</span>{' '}
+                      <strong style={{ color: '#4ade80' }}>{receivedQuantity(d)} pcs</strong>
+                    </>
+                  )}
+                  <span style={{ marginLeft: '12px', color: '#fbbf24' }}>
+                    Baaki: {remainingDemandQty(d)} pcs
+                  </span>
 
                   {d.rate ? (
                     <span
@@ -1706,7 +1825,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                         color: '#a3e635',
                       }}
                     >
-                      Est: {inr(d.rate * d.qty)}
+                      Est: {inr(d.rate * remainingDemandQty(d))}
                     </span>
                   ) : null}
                 </div>
@@ -1790,9 +1909,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
 
                 <button
                   type="button"
-                  onClick={() =>
-                    handleReceiveDemand(d)
-                  }
+                  onClick={() => openReceiveForm(d)}
                   style={{
                     background: '#16a34a',
                     color: '#fff',
@@ -1854,7 +1971,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                 }}
               >
                 <span>
-                  {d.item} ({d.qty} pcs) —{' '}
+                  {d.item} ({receivedQuantity(d)}/{d.qty} pcs) —{' '}
                   <small>
                     {d.category || 'General'}
                   </small>
@@ -1896,6 +2013,112 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
           </div>
         </details>
       )}
+
+      <Dialog
+        open={!!receivingDemand}
+        onClose={closeReceiveForm}
+        className="modal sm"
+        labelledBy="receiveDemandTitle"
+        backdropClose
+      >
+        {receivingDemand && (
+          <form noValidate onSubmit={handleReceiveDemand}>
+            <div className="mhead">
+              <div>
+                <h2 id="receiveDemandTitle">Saman Aa Gaya</h2>
+                <p className="msub">Is demand ki is baar aayi quantity ko alag AWK entry me save karo.</p>
+              </div>
+              <button type="button" className="iconbtn" onClick={closeReceiveForm} aria-label="Band karo" disabled={receiveSaving}>
+                <Icon name="x" />
+              </button>
+            </div>
+
+            <div className="mbody">
+              <div className="calcbox">
+                <span className="eq">
+                  Mangaya <b>{num(receivingDemand.qty)} pcs</b>
+                  {' · '}Aa chuka <b>{receivedQuantity(receivingDemand)} pcs</b>
+                  {' · '}Baaki <b>{remainingDemandQty(receivingDemand)} pcs</b>
+                </span>
+              </div>
+
+              <div className="fgrid">
+                <div className="field span2">
+                  <label htmlFor="receive-item">Saman</label>
+                  <input id="receive-item" value={receivingDemand.item} readOnly />
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-qty">Is baar kitna aaya *</label>
+                  <input
+                    id="receive-qty"
+                    type="number"
+                    min="0.01"
+                    max={remainingDemandQty(receivingDemand)}
+                    step="any"
+                    value={receiveQty}
+                    onChange={(e) => setReceiveQty(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-rate">Rate (₹ per piece)</label>
+                  <input
+                    id="receive-rate"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={receiveRate}
+                    onChange={(e) => setReceiveRate(e.target.value)}
+                  />
+                  <span className="hint">Is baar ka saman: {inr(num(receiveQty) * num(receiveRate))}</span>
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-order-date">Kab kharida</label>
+                  <input id="receive-order-date" type="date" value={receiveOrderDate} onChange={(e) => setReceiveOrderDate(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-date">Kab office pahuncha</label>
+                  <input id="receive-date" type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-time">Pahunchne ka samay</label>
+                  <input id="receive-time" type="time" value={receiveTime} onChange={(e) => setReceiveTime(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-vendor">Dukaan / Supplier</label>
+                  <input id="receive-vendor" value={receiveVendor} onChange={(e) => setReceiveVendor(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-brought-by">Kaun lekar aaya</label>
+                  <input id="receive-brought-by" value={receiveBroughtBy} onChange={(e) => setReceiveBroughtBy(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-by">Office me kisne liya</label>
+                  <input id="receive-by" value={receiveBy} onChange={(e) => setReceiveBy(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="receive-bill">Bill number</label>
+                  <input id="receive-bill" value={receiveBillNo} onChange={(e) => setReceiveBillNo(e.target.value)} />
+                </div>
+                <div className="field span2">
+                  <label htmlFor="receive-note">Note</label>
+                  <textarea id="receive-note" rows={2} value={receiveNote} onChange={(e) => setReceiveNote(e.target.value)} placeholder="Koi saman abhi aana baaki ho to likhein…" />
+                </div>
+              </div>
+              {receiveError && <p className="ferr" role="alert">{receiveError}</p>}
+            </div>
+
+            <div className="mfoot">
+              <button type="button" className="btn" onClick={closeReceiveForm} disabled={receiveSaving}>Rehne do</button>
+              <button type="submit" className="btn primary" disabled={receiveSaving}>
+                <Icon name="check" />
+                {receiveSaving ? 'Save ho raha…' : 'AWK ke saath save karo'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Dialog>
     </div>
   );
 }

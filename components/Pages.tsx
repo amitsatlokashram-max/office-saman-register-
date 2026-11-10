@@ -239,8 +239,7 @@ export function SamanPage() {
         sub="Har entry: kya aaya, kitne ka, kahan se, kisne laya"
         csv="items"
         tab="items"
-        addLabel="नई आवक दर्ज करें"
-        addClassName="arrival-cta"
+        add={false}
       />
 
       {!items.length ? (

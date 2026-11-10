@@ -28,6 +28,7 @@ export type Item = {
   arrivalNo: string;
   arrivalTime: string;
   arrivalMode: 'demand' | 'direct' | 'unknown';
+  demandId: string;
   receivedBy: string;
   item: string;
   category: string;
