@@ -1,7 +1,7 @@
 // Google Sheet me kaunsi line kaise likhi jaye. Script (google-apps-script/Code.gs) bas ye lines likh deta hai.
 
 import { MOVE, billExtOf, issuedQty, moveSum, myPay, num, remaining, round2, today } from './calc';
-import type { Bill, Item } from './types';
+import type { Bill, Item, TripExpense } from './types';
 
 /** Ek cell: text, number, tareekh {d:'YYYY-MM-DD'} ya links {l:[[text,url],...]} */
 export type Cell = string | number | { d: string } | { l: [string, string][] };
@@ -13,6 +13,7 @@ const DATE = 'dd-mm-yyyy';
 
 export const SAMAN_SHEET = 'Saman';
 export const LOG_SHEET = 'Kisko diya';
+export const TRIP_EXPENSE_SHEET = 'Trip Expenses';
 
 export const SAMAN_COLS: [string, string][] = [
   ['Saman', TEXT],
@@ -42,9 +43,18 @@ export const SAMAN_COLS: [string, string][] = [
   ['Demand ID', TEXT],
   ['Mili Qty', INT],
   ['Actual Rate (₹)', MONEY],
-  ['Saman ka Kharcha (₹)', MONEY],
-  ['Travel Share (₹)', MONEY],
-  ['Trip Cost (₹, ek row me)', MONEY],
+  ['Item Amount (₹)', MONEY],
+];
+
+export const TRIP_EXPENSE_COLS: [string, string][] = [
+  ['Date', DATE],
+  ['Delivery No.', TEXT],
+  ['Kisne Saman Laya', TEXT],
+  ['Expense Type', TEXT],
+  ['Details', TEXT],
+  ['Amount (₹)', MONEY],
+  ['Purchase Item ID', TEXT],
+  ['Expense ID', TEXT],
 ];
 
 export const LOG_COLS: [string, string][] = [
@@ -103,9 +113,35 @@ export function itemRow(it: Item): Cell[] {
     it.arrivalNo ? num(it.qty) : '',
     it.arrivalNo ? num(it.rate) : '',
     it.arrivalNo ? num(it.total) : '',
-    it.arrivalNo ? num(it.arrivalTravelShare) : '',
-    it.arrivalNo ? num(it.arrivalTravelCost) : '',
   ];
+}
+
+function expensesForItem(it: Item): TripExpense[] {
+  if (it.tripExpenses !== undefined) return it.tripExpenses;
+  return num(it.arrivalTravelCost) > 0 ? [{
+    id: 'legacy-' + it.id,
+    date: it.receivedDate,
+    type: 'Other',
+    description: 'Purana trip expense',
+    amount: num(it.arrivalTravelCost),
+  }] : [];
+}
+
+export function tripExpenseRowsForItem(it: Item): Cell[][] {
+  return expensesForItem(it).map((expense) => [
+    d(expense.date || it.receivedDate),
+    it.arrivalNo,
+    it.broughtBy,
+    expense.type,
+    expense.description,
+    num(expense.amount),
+    it.id,
+    expense.id,
+  ]);
+}
+
+function tripExpenseRows(items: Item[]): Cell[][] {
+  return items.flatMap(tripExpenseRowsForItem);
 }
 
 export function logRows(it: Item): Cell[][] {
@@ -139,6 +175,12 @@ export function upsertPayload(it: Item) {
     id: it.id,
     saman: { name: SAMAN_SHEET, headers: SAMAN_COLS.map((c) => c[0]), formats: SAMAN_COLS.map((c) => c[1]), row: itemRow(it) },
     log: { name: LOG_SHEET, headers: LOG_COLS.map((c) => c[0]), formats: LOG_COLS.map((c) => c[1]), rows: logRows(it) },
+    tripExpenses: {
+      name: TRIP_EXPENSE_SHEET,
+      headers: TRIP_EXPENSE_COLS.map((c) => c[0]),
+      formats: TRIP_EXPENSE_COLS.map((c) => c[1]),
+      rows: tripExpenseRowsForItem(it),
+    },
     bills: named.map((b, i) => ({ driveId: b.driveId, name: billFileName(it, i, named.length, b), month: billMonth(it) })),
   };
 }
@@ -149,5 +191,6 @@ export function replaceAllPayload(items: Item[]) {
     action: 'replaceAll' as const,
     saman: { name: SAMAN_SHEET, headers: SAMAN_COLS.map((c) => c[0]), formats: SAMAN_COLS.map((c) => c[1]), rows: sorted.map(itemRow) },
     log: { name: LOG_SHEET, headers: LOG_COLS.map((c) => c[0]), formats: LOG_COLS.map((c) => c[1]), rows: sorted.flatMap(logRows) },
+    tripExpenses: { name: TRIP_EXPENSE_SHEET, headers: TRIP_EXPENSE_COLS.map((c) => c[0]), formats: TRIP_EXPENSE_COLS.map((c) => c[1]), rows: tripExpenseRows(sorted) },
   };
 }

@@ -116,6 +116,7 @@ Model ka naam badalna ho to `AI_MODEL` variable daalo. Khaali chhodo to Gemini m
 Ye chalu karne ke baad:
 
 - Har entry **"Saman"** sheet me ek line ban jaati hai. Save, edit ya delete karte hi Sheet bhi badal jaati hai.
+- Demand delivery ke purchase details **"Saman"** me aur har trip expense (date, delivery, saman laane wala, type, details, amount) alag **"Trip Expenses"** sheet me aate hain.
 - Kisko diya, wapas aaya, kharab aur return **"Kisko diya"** sheet me likhe jaate hai.
 - Har bill ki photo/PDF aapke Google Drive ke **"Office Saman Register - Bills"** folder me mahine ke hisaab se (jaise `2026-10`) save hoti hai, naam jaise `2026-10-13 - INV-123 - Amazon.jpg`. Sheet ke "Bill (Drive)" column me click karne layak link hota hai.
 
@@ -134,6 +135,8 @@ Ye chalu karne ke baad:
    **Save** karo, phir **Deployments → ⋯ → Redeploy**.
 7. App me **Settings** kholo. "Google Sheet aur Drive" me **Chalu** dikhega. Ek baar **Saari entries Sheet me dobara bhejo** dabao, taaki purani entries aur unke bill bhi chale jaye.
 8. Team ko bill dikhane hai to Drive me "Office Saman Register - Bills" folder **Share** karo. Sheet bhi share kar sakte ho (View only theek rahega).
+
+Apps Script code me badlav ke baad `google-apps-script/Code.gs` ko Apps Script editor me paste/save karke **Deploy → Manage deployments → Edit → New version → Deploy** karo. Phir app ke Settings me **Saari entries Sheet me dobara bhejo** dabao, taaki purchase aur trip expense ki purani entries bhi alag sheets me aa jayein.
 
 **Dhyan rakhne wali baatein:**
 

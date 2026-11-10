@@ -1,7 +1,7 @@
 // Browser wala hissa: apne server (/api/google) ke through Google Sheet aur Drive se baat.
 
 import { idToken } from './firebase';
-import { LOG_COLS, LOG_SHEET, SAMAN_COLS, SAMAN_SHEET, replaceAllPayload, upsertPayload } from './sheet';
+import { LOG_COLS, LOG_SHEET, SAMAN_COLS, SAMAN_SHEET, TRIP_EXPENSE_COLS, TRIP_EXPENSE_SHEET, replaceAllPayload, upsertPayload } from './sheet';
 import type { Item } from './types';
 
 export async function fetchGoogleStatus(): Promise<boolean> {
@@ -65,6 +65,7 @@ export const sheetDelete = (id: string, driveIds: string[]) =>
     driveIds,
     saman: { name: SAMAN_SHEET, headers: SAMAN_COLS.map((c) => c[0]), formats: SAMAN_COLS.map((c) => c[1]) },
     log: { name: LOG_SHEET, headers: LOG_COLS.map((c) => c[0]), formats: LOG_COLS.map((c) => c[1]) },
+    tripExpenses: { name: TRIP_EXPENSE_SHEET, headers: TRIP_EXPENSE_COLS.map((c) => c[0]), formats: TRIP_EXPENSE_COLS.map((c) => c[1]) },
   });
 
 export const sheetReplaceAll = (items: Item[]) => call<{ rows?: number }>(replaceAllPayload(items));

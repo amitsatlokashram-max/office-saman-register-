@@ -23,7 +23,7 @@ import {
   today,
 } from '@/lib/calc';
 import { saveFile } from '@/lib/bills';
-import type { Item, StockGroup } from '@/lib/types';
+import type { Item, StockGroup, TripExpense } from '@/lib/types';
 import { Icon } from './Icon';
 import { EmptyState, FiltersBar, NoRes, PageHead } from './PageParts';
 import { SettingsSections } from './Modals';
@@ -853,44 +853,58 @@ type DeliveryReportGroup = {
   date: string;
   time: string;
   items: Item[];
+  expenses: (TripExpense & { broughtBy: string })[];
   itemTotal: number;
-  travelCost: number;
-  travelShare: number;
+  expenseTotal: number;
 };
 
 function ArrivalPurchaseReport({ items }: { items: Item[] }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
+  const inRange = (date: string) => !!date && (!from || date >= from) && (!to || date <= to);
   const grouped = new Map<string, DeliveryReportGroup>();
   for (const item of items) {
-    if (!item.arrivalNo || !item.receivedDate) continue;
-    if (from && item.receivedDate < from) continue;
-    if (to && item.receivedDate > to) continue;
-    const key = item.arrivalNo + '|' + item.receivedDate;
+    if (!item.arrivalNo) continue;
+    const expenses = item.tripExpenses ?? (num(item.arrivalTravelCost) > 0 ? [{
+      id: 'legacy-' + item.id,
+      date: item.receivedDate,
+      type: 'Other' as const,
+      description: 'Purana trip expense',
+      amount: num(item.arrivalTravelCost),
+    }] : []);
+    const selectedItems = inRange(item.receivedDate);
+    const selectedExpenses = expenses.filter((expense) => inRange(expense.date));
+    if (!selectedItems && !selectedExpenses.length) continue;
+    const key = item.arrivalNo;
     const group = grouped.get(key) || {
       key,
       arrivalNo: item.arrivalNo,
-      date: item.receivedDate,
+      date: selectedItems ? item.receivedDate : selectedExpenses[0]?.date || item.receivedDate,
       time: item.arrivalTime,
       items: [],
+      expenses: [],
       itemTotal: 0,
-      travelCost: 0,
-      travelShare: 0,
+      expenseTotal: 0,
     };
-    group.items.push(item);
-    group.itemTotal += num(item.total);
-    group.travelCost += num(item.arrivalTravelCost);
-    group.travelShare += num(item.arrivalTravelShare);
-    if (!group.time && item.arrivalTime) group.time = item.arrivalTime;
+    if (selectedItems) {
+      group.items.push(item);
+      group.itemTotal += num(item.total);
+      if (!group.date || item.receivedDate < group.date) group.date = item.receivedDate;
+      if (!group.time && item.arrivalTime) group.time = item.arrivalTime;
+    }
+    for (const expense of selectedExpenses) {
+      group.expenses.push({ ...expense, broughtBy: item.broughtBy });
+      group.expenseTotal += num(expense.amount);
+    }
     grouped.set(key, group);
   }
   const deliveries = Array.from(grouped.values()).sort(
     (a, b) => b.date.localeCompare(a.date) || b.arrivalNo.localeCompare(a.arrivalNo),
   );
   const itemTotal = deliveries.reduce((sum, delivery) => sum + delivery.itemTotal, 0);
-  const travelTotal = deliveries.reduce((sum, delivery) => sum + delivery.travelCost, 0);
-  const grandTotal = itemTotal + travelTotal;
+  const expenseTotal = deliveries.reduce((sum, delivery) => sum + delivery.expenseTotal, 0);
+  const grandTotal = itemTotal + expenseTotal;
 
   const exportExcel = () => {
     const escape = (value: string | number) => {
@@ -899,24 +913,44 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
       return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
     };
     const rows: (string | number)[][] = [
-      ['Date', 'Delivery No.', 'Time', 'Saman', 'Mili Qty', 'Actual Rate', 'Saman ka Kharcha', 'Travel Share', 'Aane-Jane ka Kharcha'],
+      ['Date', 'Delivery No.', 'Record Type', 'Time', 'Saman / Expense Type', 'Mili Qty', 'Actual Rate', 'Item Amount', 'Kisne Saman Laya', 'Expense Details', 'Trip Expense'],
     ];
     for (const delivery of deliveries) {
-      delivery.items.forEach((item, index) => rows.push([
-        delivery.date,
+      delivery.items.forEach((item) => rows.push([
+        item.receivedDate,
         delivery.arrivalNo,
+        'Purchase',
         item.arrivalTime || delivery.time,
         item.item,
         num(item.qty),
         num(item.rate),
         num(item.total),
-        num(item.arrivalTravelShare),
-        index === 0 ? delivery.travelCost : 0,
+        item.broughtBy,
+        '',
+        '',
+      ]));
+      delivery.expenses.forEach((expense) => rows.push([
+        expense.date,
+        delivery.arrivalNo,
+        'Trip Expense',
+        '',
+        expense.type,
+        '',
+        '',
+        '',
+        expense.broughtBy,
+        expense.description,
+        num(expense.amount),
       ]));
     }
-    rows.push([], ['Selected Dates ka Saman Total', '', '', '', '', '', itemTotal], ['Aane-Jane ka Kharcha', '', '', '', '', '', '', '', travelTotal], ['Grand Total', '', '', '', '', '', grandTotal]);
+    rows.push(
+      [],
+      ['Selected Dates ka Item Purchase Total', '', '', '', '', '', '', itemTotal],
+      ['Selected Dates ka Trip Expense Total', '', '', '', '', '', '', '', '', '', expenseTotal],
+      ['Grand Total', '', '', '', '', '', '', grandTotal + expenseTotal],
+    );
     saveFile(
-      'office-purchase-report-' + today() + '.csv',
+      'office-purchase-expense-report-' + today() + '.csv',
       new Blob(['\uFEFF' + rows.map((row) => row.map(escape).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }),
     );
   };
@@ -933,8 +967,8 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
     <section className="card delivery-report" id="delivery-report-print">
       <header className="card-h">
         <div>
-          <h2>Purchase aur Travel Report</h2>
-          <p className="muted small">Saman Milne ki Date aur Delivery No. ke hisaab se</p>
+          <h2>Purchase aur Trip Expense Report</h2>
+          <p className="muted small">Purchase aur trip expense ki apni date aur Delivery No. ke hisaab se</p>
         </div>
         <div className="delivery-report-actions no-print">
           <button type="button" className="btn sm" onClick={exportExcel}>
@@ -964,8 +998,8 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
 
       <div className="sumbar delivery-report-total">
         <span><b>{deliveries.length}</b> deliveries</span>
-        <span>Saman ka Total <b>{inr(itemTotal)}</b></span>
-        <span>Aane-Jane ka Kharcha <b>{inr(travelTotal)}</b></span>
+        <span>Item Purchase Total <b>{inr(itemTotal)}</b></span>
+        <span>Trip Expense Total <b>{inr(expenseTotal)}</b></span>
         <span className="sum-tot">Grand Total <strong>{inr(grandTotal)}</strong></span>
       </div>
 
@@ -973,37 +1007,69 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
         deliveries.map((delivery) => (
           <section className="delivery-report-group" key={delivery.key}>
             <header className="delivery-report-heading">
-              <h3>{fdate(delivery.date)} · {delivery.arrivalNo}</h3>
-              <span>{delivery.time || 'Time nahi likha'} · {delivery.items.length} lines</span>
+              <h3>{delivery.items.length ? fdate(delivery.date) : 'Expense Date ' + fdate(delivery.date)} · {delivery.arrivalNo}</h3>
+              <span>{delivery.time || 'Time nahi likha'} · {delivery.items.length} purchase lines · {delivery.expenses.length} expenses</span>
             </header>
-            <div className="tscroll">
-              <table className="itable delivery-table">
-                <thead>
-                  <tr>
-                    <th>Saman</th>
-                    <th className="num">Mili Qty</th>
-                    <th className="num">Actual Rate</th>
-                    <th className="num">Saman ka Kharcha</th>
-                    <th className="num">Travel Share</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {delivery.items.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.item}</td>
-                      <td className="num">{num(item.qty)}</td>
-                      <td className="num">{inr(num(item.rate))}</td>
-                      <td className="num">{inr(num(item.total))}</td>
-                      <td className="num">{inr(num(item.arrivalTravelShare))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {delivery.items.length > 0 && (
+              <>
+                <h4>Purchase Details</h4>
+                <div className="tscroll">
+                  <table className="itable delivery-table">
+                    <thead>
+                      <tr>
+                        <th>Saman</th>
+                        <th className="num">Mili Qty</th>
+                        <th className="num">Actual Rate</th>
+                        <th className="num">Item Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {delivery.items.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.item}</td>
+                          <td className="num">{num(item.qty)}</td>
+                          <td className="num">{inr(num(item.rate))}</td>
+                          <td className="num">{inr(num(item.total))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+            {delivery.expenses.length > 0 && (
+              <>
+                <h4>Trip Expense Details</h4>
+                <div className="tscroll">
+                  <table className="itable delivery-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Kisne Saman Laya</th>
+                        <th>Expense Type</th>
+                        <th>Details</th>
+                        <th className="num">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {delivery.expenses.map((expense) => (
+                        <tr key={expense.id}>
+                          <td>{fdate(expense.date)}</td>
+                          <td>{expense.broughtBy || '—'}</td>
+                          <td>{expense.type}</td>
+                          <td>{expense.description || '—'}</td>
+                          <td className="num">{inr(num(expense.amount))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
             <div className="delivery-report-subtotal">
-              <span>Saman ka Total <b>{inr(delivery.itemTotal)}</b></span>
-              <span>Aane-Jane ka Kharcha <b>{inr(delivery.travelCost)}</b></span>
-              <span>Grand Total <b>{inr(delivery.itemTotal + delivery.travelCost)}</b></span>
+              <span>Item Purchase Total <b>{inr(delivery.itemTotal)}</b></span>
+              <span>Trip Expense Total <b>{inr(delivery.expenseTotal)}</b></span>
+              <span>Grand Total <b>{inr(delivery.itemTotal + delivery.expenseTotal)}</b></span>
             </div>
           </section>
         ))

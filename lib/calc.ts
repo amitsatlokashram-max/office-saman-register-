@@ -160,7 +160,13 @@ export function normalizeItem(id: string, d: Record<string, unknown>): Item {
   const mt = (t: string): MoveType => (t === 'back' || t === 'vendor' ? t : 'damaged');
   return {
     id,
-    arrivalNo: s('arrivalNo') || s('invoiceNo') || '', arrivalTime: s('arrivalTime') || '', arrivalMode: d.arrivalMode === 'demand' || d.arrivalMode === 'direct' ? d.arrivalMode : 'unknown', demandId: s('demandId'), arrivalTravelCost: num(d.arrivalTravelCost), arrivalTravelShare: num(d.arrivalTravelShare), receivedBy: s('receivedBy') || '',
+    arrivalNo: s('arrivalNo') || s('invoiceNo') || '', arrivalTime: s('arrivalTime') || '', arrivalMode: d.arrivalMode === 'demand' || d.arrivalMode === 'direct' ? d.arrivalMode : 'unknown', demandId: s('demandId'), ...(Array.isArray(d.tripExpenses) ? { tripExpenses: d.tripExpenses.filter((expense): expense is Record<string, unknown> => !!expense && typeof expense === 'object').map((expense, index) => ({
+      id: typeof expense.id === 'string' ? expense.id : 'expense-' + index,
+      date: typeof expense.date === 'string' ? expense.date : s('receivedDate'),
+      type: expense.type === 'Petrol' || expense.type === 'Diesel' || expense.type === 'Parking' || expense.type === 'Kiraya' ? expense.type : 'Other',
+      description: typeof expense.description === 'string' ? expense.description : '',
+      amount: num(expense.amount),
+    })) } : {}), arrivalTravelCost: num(d.arrivalTravelCost), arrivalTravelShare: num(d.arrivalTravelShare), receivedBy: s('receivedBy') || '',
     item: s('item'), category: s('category'), qty: num(d.qty), rate: num(d.rate), total: num(d.total),
     orderDate: s('orderDate'), receivedDate: s('receivedDate'), vendor: s('vendor'), broughtBy: s('broughtBy'),
     billNo: s('billNo'), note: s('note'), serials: s('serials'), warrantyTill: s('warrantyTill'),

@@ -271,6 +271,12 @@ function upsert_(p) {
   deleteRowsFor_(lg, p.log.headers.indexOf('Entry ID') + 1, p.id);
   writeRows_(lg, Math.max(lg.getLastRow(), 1) + 1, p.log, p.log.rows || []);
 
+  if (p.tripExpenses) {
+    var te = sheet_(ss, p.tripExpenses);
+    deleteRowsFor_(te, p.tripExpenses.headers.indexOf('Purchase Item ID') + 1, p.id);
+    writeRows_(te, Math.max(te.getLastRow(), 1) + 1, p.tripExpenses, p.tripExpenses.rows || []);
+  }
+
   (p.bills || []).forEach(tidyBill_);
 }
 
@@ -284,15 +290,22 @@ function remove_(p) {
     var lg = sheet_(ss, p.log);
     deleteRowsFor_(lg, p.log.headers.indexOf('Entry ID') + 1, p.id);
   }
+  if (p.tripExpenses) {
+    var te = sheet_(ss, p.tripExpenses);
+    deleteRowsFor_(te, p.tripExpenses.headers.indexOf('Purchase Item ID') + 1, p.id);
+  }
   (p.driveIds || []).forEach(trash_);
 }
 
 function replaceAll_(p) {
   var ss = book_();
-  [p.saman, p.log].forEach(function (spec) {
+  [p.saman, p.log, p.tripExpenses].filter(Boolean).forEach(function (spec) {
     var sh = sheet_(ss, spec);
     var last = sh.getLastRow();
     if (last > 1) sh.getRange(2, 1, last - 1, sh.getMaxColumns()).clear();
+    if (spec.name === 'Saman' && sh.getLastColumn() > spec.headers.length) {
+      sh.getRange(1, spec.headers.length + 1, 1, sh.getLastColumn() - spec.headers.length).clearContent();
+    }
     writeRows_(sh, 2, spec, spec.rows || []);
     try {
       sh.autoResizeColumns(1, spec.headers.length);

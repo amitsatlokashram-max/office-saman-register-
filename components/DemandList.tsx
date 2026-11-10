@@ -19,7 +19,7 @@ import { useReg } from './context';
 import { blankItem, inr, nextArrivalNo, num, today, uid } from '@/lib/calc';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
-import type { Item } from '@/lib/types';
+import type { Item, TripExpense } from '@/lib/types';
 import { queueUpsert } from '@/lib/sync';
 
 export interface DemandItem {
@@ -62,7 +62,14 @@ type ReceiveLine = {
   demandId: string;
   qty: string;
   actualRate: string;
-  travelShare: string;
+};
+
+type ReceiveExpense = {
+  key: string;
+  date: string;
+  type: TripExpense['type'];
+  description: string;
+  amount: string;
 };
 
 type SavedDelivery = {
@@ -90,7 +97,8 @@ export function DemandList() {
   const [receiveOrderDate, setReceiveOrderDate] = useState(getTodayStr);
   const [receiveDate, setReceiveDate] = useState(getTodayStr);
   const [receiveTime, setReceiveTime] = useState(() => new Date().toTimeString().slice(0, 5));
-  const [receiveTravelCost, setReceiveTravelCost] = useState('');
+  const [hasTripExpenses, setHasTripExpenses] = useState(false);
+  const [receiveExpenses, setReceiveExpenses] = useState<ReceiveExpense[]>([]);
   const [receiveVendor, setReceiveVendor] = useState('');
   const [receiveBroughtBy, setReceiveBroughtBy] = useState('');
   const [receiveBy, setReceiveBy] = useState('');
@@ -306,12 +314,12 @@ export function DemandList() {
       demandId: d.id,
       qty: String(remainingDemandQty(d)),
       actualRate: '',
-      travelShare: '',
     }]);
     setReceiveOrderDate(getTodayStr());
     setReceiveDate(getTodayStr());
     setReceiveTime(new Date().toTimeString().slice(0, 5));
-    setReceiveTravelCost('');
+    setHasTripExpenses(false);
+    setReceiveExpenses([]);
     setReceiveVendor(d.link ? 'Online / Buy Link' : 'Market');
     setReceiveBroughtBy(me?.name || '');
     setReceiveBy(me?.name || '');
@@ -335,12 +343,25 @@ export function DemandList() {
       demandId,
       qty: alreadyAdded ? '' : String(remainingDemandQty(demand)),
       actualRate: '',
-      travelShare: '',
     }]);
   }
 
   function updateReceiveLine(key: string, patch: Partial<ReceiveLine>) {
     setReceiveLines((lines) => lines.map((line) => line.key === key ? { ...line, ...patch } : line));
+  }
+
+  function addReceiveExpense() {
+    setReceiveExpenses((expenses) => [...expenses, {
+      key: uid(),
+      date: receiveDate || getTodayStr(),
+      type: 'Petrol',
+      description: '',
+      amount: '',
+    }]);
+  }
+
+  function updateReceiveExpense(key: string, patch: Partial<ReceiveExpense>) {
+    setReceiveExpenses((expenses) => expenses.map((expense) => expense.key === key ? { ...expense, ...patch } : expense));
   }
 
   // Save all lines in one delivery; each line has its own stock and Sheet row.
@@ -359,21 +380,22 @@ export function DemandList() {
       demand: demands.find((demand) => demand.id === line.demandId),
       qty: Number(line.qty),
       rate: line.actualRate.trim() ? Number(line.actualRate) : NaN,
-      travelShare: line.travelShare.trim() ? Number(line.travelShare) : 0,
     }));
-    const travelCost = receiveTravelCost.trim() ? Number(receiveTravelCost) : 0;
-    const badLine = lines.find((line) => !line.demand || !Number.isFinite(line.qty) || line.qty <= 0 || !Number.isFinite(line.rate) || line.rate < 0 || !Number.isFinite(line.travelShare) || line.travelShare < 0);
+    const expenses = hasTripExpenses ? receiveExpenses.map((expense) => ({
+      ...expense,
+      amount: Number(expense.amount),
+      description: expense.description.trim(),
+    })) : [];
+    const badLine = lines.find((line) => !line.demand || !Number.isFinite(line.qty) || line.qty <= 0 || !Number.isFinite(line.rate) || line.rate < 0);
     if (badLine) {
       setReceiveError('Har line me demand, sahi Mili Qty aur zero ya usse zyada Actual Rate likho.');
       return;
     }
-    if (!Number.isFinite(travelCost) || travelCost < 0) {
-      setReceiveError('Aane-jane ka kharcha zero ya usse zyada likho.');
-      return;
-    }
-    const shareTotal = lines.reduce((sum, line) => sum + line.travelShare, 0);
-    if (shareTotal > travelCost + 0.005) {
-      setReceiveError('Item-wise travel share, total Aane-Jane ke kharche se zyada nahi ho sakta.');
+    if (hasTripExpenses && (!expenses.length || expenses.some((expense) =>
+      !expense.date || !Number.isFinite(expense.amount) || expense.amount <= 0 ||
+      (expense.type === 'Other' && !expense.description)
+    ))) {
+      setReceiveError('Har trip expense ki date, type aur sahi amount bharo; Other ke liye kharche ka naam bhi likho.');
       return;
     }
     if (!receiveDate || !receiveTime || !receiveOrderDate) {
@@ -387,6 +409,14 @@ export function DemandList() {
     try {
       const db = getFirestore();
       const sequenceRef = doc(db, 'settings', 'arrival-sequence');
+      const tripExpenses: TripExpense[] = expenses.map((expense) => ({
+        id: expense.key,
+        date: expense.date,
+        type: expense.type,
+        description: expense.description,
+        amount: Math.round(expense.amount * 100) / 100,
+      }));
+      const tripCost = tripExpenses.reduce((sum, expense) => sum + expense.amount, 0);
       const uniqueDemandIds = Array.from(new Set(lines.map((line) => line.demandId)));
       const demandRefs = new Map(uniqueDemandIds.map((id) => [id, doc(db, 'demands', id)]));
       const itemRefs = lines.map(() => doc(collection(db, 'purchases')));
@@ -438,8 +468,9 @@ export function DemandList() {
             arrivalTime: receiveTime,
             arrivalMode: 'demand',
             demandId: line.demandId,
-            arrivalTravelCost: index === 0 ? travelCost : 0,
-            arrivalTravelShare: line.travelShare,
+            ...(index === 0 ? { tripExpenses } : {}),
+            arrivalTravelCost: index === 0 ? tripCost : 0,
+            arrivalTravelShare: 0,
             item: String(current.item || demand.item).trim(),
             category: String(current.category || demand.category || 'General'),
             qty: line.qty,
@@ -485,7 +516,7 @@ export function DemandList() {
         return {
           arrivalNo,
           itemIds: purchases.map((purchase) => purchase.id),
-          total: purchases.reduce((sum, purchase) => sum + purchase.total, 0) + travelCost,
+          total: purchases.reduce((sum, purchase) => sum + purchase.total, 0) + tripCost,
           outstanding,
         };
       });
@@ -533,7 +564,9 @@ export function DemandList() {
     (sum, line) => sum + Math.round(num(line.qty) * num(line.actualRate) * 100) / 100,
     0,
   );
-  const receiveTravelPreview = Math.max(0, num(receiveTravelCost));
+  const receiveExpenseTotal = hasTripExpenses
+    ? receiveExpenses.reduce((sum, expense) => sum + Math.max(0, num(expense.amount)), 0)
+    : 0;
 
   const grandTotal = pendingList.reduce(
     (sum, d) => sum + remainingDemandQty(d) * (d.rate || 0),
@@ -2206,11 +2239,6 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                   <label htmlFor="receive-bill">Bill number</label>
                   <input id="receive-bill" value={receiveBillNo} onChange={(e) => setReceiveBillNo(e.target.value)} />
                 </div>
-                <div className="field">
-                  <label htmlFor="receive-travel">Aane-Jane ka Kharcha</label>
-                  <input id="receive-travel" type="number" min="0" step="0.01" value={receiveTravelCost} onChange={(e) => setReceiveTravelCost(e.target.value)} placeholder="₹" />
-                  <span className="hint">Travel Share isi kharche ka batwara hai; Grand Total me dobara nahi judta.</span>
-                </div>
               </div>
 
               <section className="receive-lines">
@@ -2244,11 +2272,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                           <input id={`receive-rate-${line.key}`} type="number" min="0" step="0.01" value={line.actualRate} onChange={(e) => updateReceiveLine(line.key, { actualRate: e.target.value })} required />
                         </div>
                         <div className="field">
-                          <label htmlFor={`receive-share-${line.key}`}>Travel Share (optional)</label>
-                          <input id={`receive-share-${line.key}`} type="number" min="0" step="0.01" value={line.travelShare} onChange={(e) => updateReceiveLine(line.key, { travelShare: e.target.value })} placeholder="₹" />
-                        </div>
-                        <div className="field">
-                          <span className="flabel">Saman ka Kharcha</span>
+                          <span className="flabel">Item Amount</span>
                           <strong className="num">{inr(lineTotal)}</strong>
                         </div>
                       </div>
@@ -2268,11 +2292,75 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                 )}
               </section>
 
+              <section className="receive-lines trip-expenses">
+                <div className="card-h">
+                  <div>
+                    <h3>Kharidne Jaane ka Kharcha</h3>
+                    <span className="muted small">Trip expense item purchase se alag rahega.</span>
+                  </div>
+                  <label className="field">
+                    <span>Kharcha hua?</span>
+                    <select value={hasTripExpenses ? 'yes' : 'no'} onChange={(e) => {
+                      const hasExpenses = e.target.value === 'yes';
+                      setHasTripExpenses(hasExpenses);
+                      if (hasExpenses && !receiveExpenses.length) addReceiveExpense();
+                      if (!hasExpenses) setReceiveExpenses([]);
+                    }}>
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                  </label>
+                </div>
+                {hasTripExpenses && (
+                  <>
+                    {receiveExpenses.map((expense, index) => (
+                      <div className="card receive-line" key={expense.key}>
+                        <div className="card-h">
+                          <strong>Trip expense {index + 1}</strong>
+                          <button type="button" className="iconbtn sm" onClick={() => setReceiveExpenses((all) => all.filter((candidate) => candidate.key !== expense.key))} aria-label="Ye kharcha hatao">
+                            <Icon name="x" />
+                          </button>
+                        </div>
+                        <div className="fgrid">
+                          <div className="field">
+                            <label htmlFor={`receive-expense-date-${expense.key}`}>Kharch ki Date</label>
+                            <input id={`receive-expense-date-${expense.key}`} type="date" value={expense.date} onChange={(e) => updateReceiveExpense(expense.key, { date: e.target.value })} required />
+                          </div>
+                          <div className="field">
+                            <label htmlFor={`receive-expense-type-${expense.key}`}>Expense Type</label>
+                            <select id={`receive-expense-type-${expense.key}`} value={expense.type} onChange={(e) => updateReceiveExpense(expense.key, { type: e.target.value as TripExpense['type'] })}>
+                              <option>Petrol</option>
+                              <option>Diesel</option>
+                              <option>Parking</option>
+                              <option>Kiraya</option>
+                              <option>Other</option>
+                            </select>
+                          </div>
+                          {expense.type === 'Other' && (
+                            <div className="field">
+                              <label htmlFor={`receive-expense-description-${expense.key}`}>Kharcha kis cheez ka</label>
+                              <input id={`receive-expense-description-${expense.key}`} value={expense.description} onChange={(e) => updateReceiveExpense(expense.key, { description: e.target.value })} required />
+                            </div>
+                          )}
+                          <div className="field">
+                            <label htmlFor={`receive-expense-amount-${expense.key}`}>Amount</label>
+                            <input id={`receive-expense-amount-${expense.key}`} type="number" min="0.01" step="0.01" value={expense.amount} onChange={(e) => updateReceiveExpense(expense.key, { amount: e.target.value })} required />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" className="btn sm" onClick={addReceiveExpense}>
+                      <Icon name="plus" /> Add Expense
+                    </button>
+                  </>
+                )}
+              </section>
+
               <div className="calcbox">
                 <span className="eq">
-                  Saman ka Total <b>{inr(receiveItemsTotal)}</b>
-                  {' · '}Aane-Jane ka Kharcha <b>{inr(receiveTravelPreview)}</b>
-                  {' · '}Grand Total <b>{inr(receiveItemsTotal + receiveTravelPreview)}</b>
+                  Item Amount <b>{inr(receiveItemsTotal)}</b>
+                  {' · '}Trip Expense <b>{inr(receiveExpenseTotal)}</b>
+                  {' · '}Grand Total <b>{inr(receiveItemsTotal + receiveExpenseTotal)}</b>
                 </span>
               </div>
 

@@ -23,12 +23,21 @@ export type MoveType = 'back' | 'damaged' | 'vendor';
 
 export type Move = { id: string; date: string; qty: number; type: MoveType; note: string; by: string };
 
+export type TripExpense = {
+  id: string;
+  date: string;
+  type: 'Petrol' | 'Diesel' | 'Parking' | 'Kiraya' | 'Other';
+  description: string;
+  amount: number;
+};
+
 export type Item = {
   id: string;
   arrivalNo: string;
   arrivalTime: string;
   arrivalMode: 'demand' | 'direct' | 'unknown';
   demandId: string;
+  tripExpenses?: TripExpense[];
   arrivalTravelCost: number;
   arrivalTravelShare: number;
   receivedBy: string;
