@@ -189,6 +189,7 @@ function IssueForm({
             <input
               id="i-date"
               type="date"
+              max={today()}
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
@@ -413,6 +414,7 @@ function MoveForm({
             <input
               id="m-date"
               type="date"
+              max={today()}
               value={date}
               onChange={(e) =>
                 setDate(e.target.value)

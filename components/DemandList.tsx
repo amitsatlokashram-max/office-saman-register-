@@ -2276,11 +2276,11 @@ _Sent by: ${me?.email || 'Office'}_`;
               <div className="fgrid">
                 <div className="field">
                   <label htmlFor="receive-order-date">Purchase date</label>
-                  <input id="receive-order-date" type="date" value={receiveOrderDate} onChange={(e) => setReceiveOrderDate(e.target.value)} />
+                  <input id="receive-order-date" type="date" max={today()} value={receiveOrderDate} onChange={(e) => setReceiveOrderDate(e.target.value)} />
                 </div>
                 <div className="field">
                   <label htmlFor="receive-date">Received date</label>
-                  <input id="receive-date" type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} required />
+                  <input id="receive-date" type="date" max={today()} value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} required />
                 </div>
                 <div className="field">
                   <label htmlFor="receive-time">Delivery time</label>
@@ -2422,7 +2422,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                         <div className="fgrid">
                           <div className="field">
                             <label htmlFor={`receive-expense-date-${expense.key}`}>Expense date</label>
-                            <input id={`receive-expense-date-${expense.key}`} type="date" value={expense.date} onChange={(e) => updateReceiveExpense(expense.key, { date: e.target.value })} required />
+                            <input id={`receive-expense-date-${expense.key}`} type="date" max={today()} value={expense.date} onChange={(e) => updateReceiveExpense(expense.key, { date: e.target.value })} required />
                           </div>
                           <div className="field">
                             <label htmlFor={`receive-expense-type-${expense.key}`}>Expense Type</label>

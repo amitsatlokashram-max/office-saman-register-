@@ -444,6 +444,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                         />
                         <input
                           type="date"
+                          max={today()}
                           value={editDate}
                           onChange={(e) => setEditDate(e.target.value)}
                           style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' }}

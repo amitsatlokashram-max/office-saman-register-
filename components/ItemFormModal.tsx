@@ -633,7 +633,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
                 </div>
                 <div className="field">
                   <label htmlFor="f-myBackDate">Reimbursement date</label>
-                  <input id="f-myBackDate" type="date" value={v.myBackDate} onChange={(e) => set('myBackDate', e.target.value)} />
+                  <input id="f-myBackDate" type="date" max={today()} value={v.myBackDate} onChange={(e) => set('myBackDate', e.target.value)} />
                 </div>
               </div>
               <div className={myBal.cls} id="f-myBal" aria-live="polite">
@@ -668,12 +668,12 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
             </div>
             <div className="field">
               <label htmlFor="f-orderDate">Order date</label>
-              <input id="f-orderDate" type="date" className={cls('orderDate')} value={v.orderDate} onChange={(e) => set('orderDate', e.target.value)} />
+              <input id="f-orderDate" type="date" max={today()} className={cls('orderDate')} value={v.orderDate} onChange={(e) => set('orderDate', e.target.value)} />
             </div>
             <div className="field">
               <label htmlFor="f-receivedDate">Received date</label>
               <div className="inrow">
-                <input id="f-receivedDate" type="date" value={v.receivedDate} onChange={(e) => set('receivedDate', e.target.value)} />
+                <input id="f-receivedDate" type="date" max={today()} value={v.receivedDate} onChange={(e) => set('receivedDate', e.target.value)} />
                 <button type="button" className="btn sm" onClick={() => set('receivedDate', today())}>
                   Today
                 </button>
@@ -736,7 +736,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
                 <div className="fgrid">
                   <div className="field">
                     <label htmlFor="f-iss-date">Date issued</label>
-                    <input id="f-iss-date" type="date" value={v.issDate} onChange={(e) => set('issDate', e.target.value)} />
+                    <input id="f-iss-date" type="date" max={today()} value={v.issDate} onChange={(e) => set('issDate', e.target.value)} />
                   </div>
                 </div>
               </>

@@ -991,11 +991,11 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
       <div className="delivery-report-filters no-print">
         <label className="field">
           <span>Start date</span>
-          <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+          <input type="date" value={from} max={to || today()} onChange={(e) => setFrom(e.target.value)} />
         </label>
         <label className="field">
           <span>End date</span>
-          <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+          <input type="date" value={to} min={from || undefined} max={today()} onChange={(e) => setTo(e.target.value)} />
         </label>
         {(from || to) && (
           <button type="button" className="btn sm" onClick={() => { setFrom(''); setTo(''); }}>
