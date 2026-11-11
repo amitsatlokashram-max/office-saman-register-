@@ -72,7 +72,7 @@ function TRow({
       </td>
       <td className="c-item">
         <button type="button" className="rowlink">
-          {it.item || '(bina naam)'}
+          {it.item || '(Unnamed item)'}
         </button>
         {sub && <small>{sub}</small>}
       </td>
@@ -84,7 +84,7 @@ function TRow({
         {it.receivedDate ? (
           fdate(it.receivedDate)
         ) : (
-          <em className="pend">Abhi nahi</em>
+          <em className="pend">Not received</em>
         )}
       </td>
       <td className="c-src">
@@ -96,14 +96,14 @@ function TRow({
           <span className={'stamp ' + st.cls}>{st.label}</span>
           {mp.due > 0 && (
             <span className="stamp low">
-              Mere {inr(mp.due)} baaki
+              {inr(mp.due)} reimbursement due
             </span>
           )}
         </span>
       </td>
       <td
         className="c-bill"
-        title={nb ? nb + ' bill lage hai' : 'Bill nahi laga'}
+        title={nb ? nb + ' receipt(s) attached' : 'No receipt attached'}
       >
         {nb > 0 ? (
           <>
@@ -141,7 +141,7 @@ function Card({
       >
         <span className="lc-top">
           <span className="lc-name">
-            <strong>{it.item || '(bina naam)'}</strong>
+            <strong>{it.item || '(Unnamed item)'}</strong>
             <small>
               #{String(no).padStart(3, '0')}
               {sub ? ' · ' + sub : ''}
@@ -168,7 +168,7 @@ function Card({
             {it.receivedDate ? (
               fdate(it.receivedDate)
             ) : (
-              <em className="pend">Abhi nahi aaya</em>
+              <em className="pend">Not received</em>
             )}
           </span>
           {(it.vendor || it.broughtBy) && (
@@ -186,7 +186,7 @@ function Card({
 
         {mp.due > 0 && (
           <span className="stamp low">
-            Mere {inr(mp.due)} baaki
+            {inr(mp.due)} reimbursement due
           </span>
         )}
       </button>
@@ -237,8 +237,8 @@ export function SamanPage() {
   return (
     <>
       <PageHead
-        title="Saman ki list"
-        sub="Har entry: kya aaya, kitne ka, kahan se, kisne laya"
+        title="Items"
+        sub="Every purchase, cost, supplier, and delivery in one place"
         csv="items"
         tab="items"
         add={false}
@@ -252,7 +252,7 @@ export function SamanPage() {
 
           {!list.length ? (
             <NoRes
-              msg="Is filter me koi entry nahi mili."
+              msg="No entries match these filters."
               onClear={clearFilters}
             />
           ) : (
@@ -265,7 +265,7 @@ export function SamanPage() {
                   <b>{pcs}</b> pcs
                 </span>
                 <span className="sum-tot">
-                  Kul jod{' '}
+                  Total{' '}
                   <strong id="list-total">{inr(total)}</strong>
                 </span>
               </div>
@@ -275,13 +275,13 @@ export function SamanPage() {
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Saman</th>
+                      <th>Item</th>
                       <th className="num">Pcs</th>
                       <th className="num">Rate</th>
                       <th className="num">Total</th>
-                      <th>Mangaya</th>
-                      <th>Pahuncha</th>
-                      <th>Kahan se / Kisne laya</th>
+                      <th>Ordered</th>
+                      <th>Received</th>
+                      <th>Supplier / Brought by</th>
                       <th>Status</th>
                       <th className="c-bill">
                         <span className="sr">Bill</span>
@@ -357,7 +357,7 @@ function MinInput({
       className="mininp"
       value={val}
       placeholder="—"
-      aria-label={'Kam se kam stock: ' + g.name}
+      aria-label={'Minimum stock: ' + g.name}
       onChange={(e) => setVal(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
@@ -415,7 +415,7 @@ export function StockPage() {
       <NoRes
         msg={
           f.stock === 'low'
-            ? 'Abhi koi saman kam stock me nahi hai.'
+            ? 'There are no low-stock items.'
             : undefined
         }
         onClear={clearFilters}
@@ -426,15 +426,15 @@ export function StockPage() {
       <>
         <div className="sumbar">
           <span>
-            <b>{gs.length}</b> tarah ka saman
+            <b>{gs.length}</b> item types
           </span>
           {lowN > 0 && (
             <span className="sum-low">
-              <b>{lowN}</b> kam stock me
+              <b>{lowN}</b> low-stock items
             </span>
           )}
           <span className="sum-tot">
-            Stock me kul <strong>{pcs} pcs</strong>
+            Total stock <strong>{pcs} pcs</strong>
           </span>
         </div>
 
@@ -442,14 +442,14 @@ export function StockPage() {
           <table className="itable stable-stock">
             <thead>
               <tr>
-                <th>Saman</th>
-                <th className="num">Kul aaya</th>
-                <th className="num">Rasta me</th>
-                <th className="num">Diya</th>
-                <th className="num">Wapas</th>
-                <th className="num">Kharab / return</th>
-                <th className="num">Bacha</th>
-                <th className="no-print">Kam se kam</th>
+                <th>Item</th>
+                <th className="num">Received</th>
+                <th className="num">In transit</th>
+                <th className="num">Issued</th>
+                <th className="num">Returned</th>
+                <th className="num">Damaged / vendor return</th>
+                <th className="num">Remaining</th>
+                <th className="no-print">Minimum stock</th>
                 <th>Status</th>
                 <th className="no-print">
                   <span className="sr">Entries</span>
@@ -513,7 +513,7 @@ export function StockPage() {
     <>
       <PageHead
         title="Stock"
-        sub='Ek naam ke saman ka jod. "Kam se kam" me number daalo, stock usse kam hote hi laal ho jayega.'
+        sub='Totals by item. Set a "Minimum stock" level to highlight items that run low.'
         csv="stock"
         tab="stock"
       />
@@ -578,8 +578,7 @@ export function IssuesPage() {
           <Icon name="users" />
         </span>
         <p>
-          Abhi tak kisi ko kuch nahi diya. Saman ki list me koi
-          entry kholo aur &quot;Kisi ko do&quot; dabao.
+          No items have been issued yet. Open an item in the register and select &quot;Issue item&quot;.
         </p>
       </div>
     );
@@ -591,7 +590,7 @@ export function IssuesPage() {
         {people.length > 1 && (
           <div
             className="people no-print"
-            aria-label="Kisko kitna diya"
+            aria-label="Issued items by person"
           >
             {people.map((p) => (
               <button
@@ -601,7 +600,7 @@ export function IssuesPage() {
                 onClick={() =>
                   setF((x) => ({ ...x, q: p.name }))
                 }
-                title={p.name + ' ki entries dikhao'}
+                title={'Show entries for ' + p.name}
               >
                 <span className="avatar sm">
                   {initials(p.name)}
@@ -617,13 +616,13 @@ export function IssuesPage() {
           <>
             <div className="sumbar">
               <span>
-                <b>{list.length}</b> baar diya
+                <b>{list.length}</b> issues
               </span>
               <span>
                 <b>{pcs}</b> pcs
               </span>
               <span className="sum-tot">
-                Kul keemat <strong>{inr(val)}</strong>
+                Total value <strong>{inr(val)}</strong>
               </span>
             </div>
 
@@ -631,10 +630,10 @@ export function IssuesPage() {
               <table className="itable">
                 <thead>
                   <tr>
-                    <th>Kab diya</th>
-                    <th>Saman</th>
+                    <th>Date issued</th>
+                    <th>Item</th>
                     <th className="num">Pcs</th>
-                    <th>Kisko diya</th>
+                    <th>Issued to</th>
                     <th>Department</th>
                     <th className="num">Keemat</th>
                     <th>Note</th>
@@ -653,7 +652,7 @@ export function IssuesPage() {
                           type="button"
                           onClick={() => openEntry(i.itemId)}
                         >
-                          {i.itemName || '(bina naam)'}
+                          {i.itemName || '(Unnamed item)'}
                         </button>
                       </td>
                       <td className="num">{i.qty}</td>
@@ -690,15 +689,15 @@ export function IssuesPage() {
         {showMoves && (
           <>
             <h2 className="sub-h">
-              Wapas aaya, kharab, return
+              Returns and damaged items
             </h2>
             <div className="tcard tscroll">
               <table className="itable">
                 <thead>
                   <tr>
-                    <th>Kab</th>
-                    <th>Saman</th>
-                    <th>Kya hua</th>
+                    <th>Date</th>
+                    <th>Item</th>
+                    <th>Action</th>
                     <th className="num">Pcs</th>
                     <th className="num">Keemat</th>
                     <th>Note</th>
@@ -716,7 +715,7 @@ export function IssuesPage() {
                           type="button"
                           onClick={() => openEntry(m.itemId)}
                         >
-                          {m.itemName || '(bina naam)'}
+                          {m.itemName || '(Unnamed item)'}
                         </button>
                       </td>
                       <td>
@@ -752,8 +751,8 @@ export function IssuesPage() {
   return (
     <>
       <PageHead
-        title="Kisko diya"
-        sub="Kis bande ya department ko kab, kya, kitna diya"
+        title="Issued items"
+        sub="Track what was issued, when, and to whom"
         csv="issues"
         tab="issues"
       />
@@ -791,7 +790,7 @@ function Block({
   tone?: 'gold' | 'red';
 }) {
   const max = Math.max(1, ...rows.map((r) => r.amt));
-  let body: ReactNode = <p className="none">Abhi kuch nahi.</p>;
+  let body: ReactNode = <p className="none">Nothing to show yet.</p>;
 
   if (rows.length) {
     body = (
@@ -913,7 +912,7 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
       return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
     };
     const rows: (string | number)[][] = [
-      ['Date', 'Delivery No.', 'Record Type', 'Time', 'Saman / Expense Type', 'Mili Qty', 'Online Price / Piece', 'Actual Rate / Piece', 'Item Amount', 'Kisne Saman Laya', 'Expense Details', 'Trip Expense'],
+      ['Date', 'Delivery No.', 'Record Type', 'Time', 'Item / Expense Type', 'Received Qty', 'Online Price / Piece', 'Actual Rate / Piece', 'Item Amount', 'Brought by', 'Expense Details', 'Trip Expense'],
     ];
     for (const delivery of deliveries) {
       delivery.items.forEach((item) => rows.push([
@@ -947,8 +946,8 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
     }
     rows.push(
       [],
-      ['Selected Dates ka Item Purchase Total', '', '', '', '', '', '', '', itemTotal],
-      ['Selected Dates ka Trip Expense Total', '', '', '', '', '', '', '', '', '', '', expenseTotal],
+      ['Selected Dates Item Purchase Total', '', '', '', '', '', '', '', itemTotal],
+      ['Selected Dates Trip Expense Total', '', '', '', '', '', '', '', '', '', '', expenseTotal],
       ['Grand Total', '', '', '', '', '', '', '', grandTotal],
     );
     saveFile(
@@ -969,8 +968,8 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
     <section className="card delivery-report" id="delivery-report-print">
       <header className="card-h">
         <div>
-          <h2>Purchase aur Trip Expense Report</h2>
-          <p className="muted small">Purchase aur trip expense ki apni date aur Delivery No. ke hisaab se</p>
+          <h2>Purchase and Trip Expense Report</h2>
+          <p className="muted small">Purchases and trip expenses grouped by their dates and delivery numbers</p>
         </div>
         <div className="delivery-report-actions no-print">
           <button type="button" className="btn sm" onClick={exportExcel}>
@@ -984,16 +983,16 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
 
       <div className="delivery-report-filters no-print">
         <label className="field">
-          <span>Shuru Date</span>
+          <span>Start date</span>
           <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
         </label>
         <label className="field">
-          <span>Aakhri Date</span>
+          <span>End date</span>
           <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
         </label>
         {(from || to) && (
           <button type="button" className="btn sm" onClick={() => { setFrom(''); setTo(''); }}>
-            <Icon name="x" /> Date hatao
+            <Icon name="x" /> Clear dates
           </button>
         )}
       </div>
@@ -1010,7 +1009,7 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
           <section className="delivery-report-group" key={delivery.key}>
             <header className="delivery-report-heading">
               <h3>{delivery.items.length ? fdate(delivery.date) : 'Expense Date ' + fdate(delivery.date)} · {delivery.arrivalNo}</h3>
-              <span>{delivery.time || 'Time nahi likha'} · {delivery.items.length} purchase lines · {delivery.expenses.length} expenses</span>
+              <span>{delivery.time || 'Time not recorded'} · {delivery.items.length} purchase lines · {delivery.expenses.length} expenses</span>
             </header>
             {delivery.items.length > 0 && (
               <>
@@ -1019,8 +1018,8 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
                   <table className="itable delivery-table">
                     <thead>
                       <tr>
-                        <th>Saman</th>
-                        <th className="num">Mili Qty</th>
+                        <th>Item</th>
+                        <th className="num">Received qty</th>
                         <th className="num">Online Price / Piece</th>
                         <th className="num">Actual Rate</th>
                         <th className="num">Item Amount</th>
@@ -1049,7 +1048,7 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
                     <thead>
                       <tr>
                         <th>Date</th>
-                        <th>Kisne Saman Laya</th>
+                        <th>Brought by</th>
                         <th>Expense Type</th>
                         <th>Details</th>
                         <th className="num">Amount</th>
@@ -1078,7 +1077,7 @@ function ArrivalPurchaseReport({ items }: { items: Item[] }) {
           </section>
         ))
       ) : (
-        <p className="none">Chuni hui dates me purchase delivery record nahi mila.</p>
+        <p className="none">No purchase delivery records found for the selected dates.</p>
       )}
     </section>
   );
@@ -1114,18 +1113,18 @@ export function HisaabPage() {
     .map((o) => ({ ...o, name: mlabel(o.name) }));
 
   const vendors = group(
-    (it) => it.vendor || 'Nahi likha',
+    (it) => it.vendor || 'Not specified',
   ).sort((a, b) => b.amt - a.amt);
 
   const cats = group(
-    (it) => it.category || 'Nahi likha',
+    (it) => it.category || 'Not specified',
   ).sort((a, b) => b.amt - a.amt);
 
   const dm = new Map<string, BRow>();
 
   for (const it of list) {
     for (const is of it.issues) {
-      const k = is.dept || 'Department nahi likha';
+      const k = is.dept || 'Department not specified';
       const r = dm.get(k) || {
         name: k,
         n: 0,
@@ -1160,19 +1159,19 @@ export function HisaabPage() {
   const myRows: BRow[] = nP
     ? [
         {
-          name: 'Maine diye',
+          name: 'Paid by me',
           n: nP,
           pcs: 0,
           amt: myP,
         },
         {
-          name: 'Wapas mil gaye',
+          name: 'Reimbursed',
           n: nB,
           pcs: 0,
           amt: myB,
         },
         {
-          name: 'Abhi baaki',
+          name: 'Outstanding',
           n: nD,
           pcs: 0,
           amt: Math.max(0, round2(myP - myB)),
@@ -1200,8 +1199,8 @@ export function HisaabPage() {
   return (
     <>
       <PageHead
-        title="Hisaab"
-        sub="Mahine, dukaan, saman aur department ke hisaab se kharcha"
+        title="Reports"
+        sub="Expenses by month, supplier, item, and department"
         csv="summary"
         tab="summary"
       />
@@ -1214,10 +1213,10 @@ export function HisaabPage() {
 
           <div className="sumbar">
             <span>
-              <b>{list.length}</b> entries ka kul kharcha
+              <b>{list.length}</b> entries · total expenses
             </span>
             {filtersActive(f, 'summary') && (
-              <span className="muted">filter laga hai</span>
+              <span className="muted">Filters applied</span>
             )}
             <span className="sum-tot">
               <strong>{inr(sumTotal(list))}</strong>
@@ -1226,47 +1225,47 @@ export function HisaabPage() {
 
           <div className="sgrid">
             <Block
-              title="Mahine ke hisaab se"
-              note="Jis mahine mangaya, us mahine ka kharcha"
+              title="By month"
+              note="Expenses grouped by order month"
               rows={months}
-              cols={['Mahina', 'Entries']}
+              cols={['Month', 'Entries']}
               countKey="n"
               tone="gold"
             />
             <Block
-              title="Kahan se mangaya"
-              note="Har dukaan ya site se kitne ka saman aaya"
+              title="By supplier"
+              note="Purchases from each supplier or site"
               rows={vendors}
-              cols={['Dukaan / site', 'Entries']}
+              cols={['Supplier / site', 'Entries']}
               countKey="n"
             />
             <Block
-              title="Kis tarah ka saman"
-              note="Category ke hisaab se kharcha"
+              title="By category"
+              note="Expenses grouped by category"
               rows={cats}
-              cols={['Saman', 'Pcs']}
+              cols={['Category', 'Pcs']}
               countKey="pcs"
             />
             <Block
-              title="Department ko kitna diya"
-              note="Jitne piece diye, unki keemat rate ke hisaab se"
+              title="By department"
+              note="Value of items issued to each department"
               rows={depts}
               cols={['Department', 'Pcs']}
               countKey="pcs"
             />
             <Block
-              title="Mera paisa"
-              note="Jo aapne apni jeb se diye, kitne wapas mile, kitne baaki"
+              title="Reimbursements"
+              note="Track amounts paid personally, reimbursed, and outstanding"
               rows={myRows}
-              cols={['Hisaab', 'Entries']}
+              cols={['Status', 'Entries']}
               countKey="n"
               tone="gold"
             />
             <Block
-              title="Kis saman ke mere paise baaki"
-              note="Jin entries ke paise abhi wapas milne hai"
+              title="Outstanding reimbursements"
+              note="Entries that still need to be reimbursed"
               rows={dueRows}
-              cols={['Saman', 'Pcs']}
+              cols={['Item', 'Pcs']}
               countKey="pcs"
               tone="red"
             />
@@ -1285,7 +1284,7 @@ export function SettingsPage() {
     <>
       <PageHead
         title="Settings"
-        sub="Aapka account, team, AI aur Google Sheet"
+        sub="Manage your account, team, AI, and Google Sheets"
         print={false}
         add={false}
       />
@@ -1301,7 +1300,7 @@ export function DemandPage() {
     <>
       <PageHead
         title="Demand List / Orders"
-        sub="Naya saman order requirement, WhatsApp slip aur stock conversion"
+        sub="Manage item requests, share order slips, and receive items into stock"
         print={false}
         add={false}
       />

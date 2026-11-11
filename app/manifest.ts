@@ -1,11 +1,11 @@
 import type { MetadataRoute } from 'next';
 
-// Phone pe "Add to Home screen" karne par app ki tarah khulta hai
+// Opens like an app when added to a phone's home screen.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Office Saman Register',
-    short_name: 'Saman Register',
-    description: 'Office ke saman ka register',
+    name: 'Office Supplies Register',
+    short_name: 'Office Supplies',
+    description: 'Track office purchases, deliveries, receipts, and stock.',
     start_url: '/',
     display: 'standalone',
     background_color: '#070B16',

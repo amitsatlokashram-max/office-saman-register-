@@ -53,12 +53,12 @@ const emit = () => onChange({
 });
 
 export function syncMessage(code: string): string {
-  if (code === 'bad_secret') return 'Google Sheet ka secret galat hai. Vercel me GOOGLE_SCRIPT_SECRET check karo.';
-  if (code === 'script_access') return 'Google script tak pahunch nahi hui. Deploy karte waqt "Who has access: Anyone" chuno (README dekho).';
-  if (code === 'network') return 'Google Sheet me abhi nahi gaya. Net aate hi apne aap chala jayega.';
-  if (code === 'not_member') return 'Google Sheet ke liye dobara sign in karo.';
-  if (code === 'not_configured') return 'Google Sheet abhi juda nahi hai.';
-  return 'Google Sheet me abhi nahi gaya, thodi der me apne aap dobara koshish hogi.';
+  if (code === 'bad_secret') return 'The Google Sheets secret is incorrect. Check GOOGLE_SCRIPT_SECRET in Vercel.';
+  if (code === 'script_access') return 'Could not access the Google script. Select "Who has access: Anyone" when deploying (see the README).';
+  if (code === 'network') return 'Could not sync to Google Sheets. Changes will sync when you reconnect.';
+  if (code === 'not_member') return 'Sign in again to sync with Google Sheets.';
+  if (code === 'not_configured') return 'Google Sheets is not connected.';
+  return 'Could not sync to Google Sheets. Sync will retry shortly.';
 }
 
 export function initSync(o: {
@@ -232,11 +232,11 @@ export async function resyncAll(items: Item[], progress: (msg: string) => void):
     const list: Item[] = [];
     for (const it of items) {
       if (it.bills.some((b) => !b.driveId)) {
-        progress('Bill Drive me ja rahe hai… (' + ++n + '/' + need + ')');
+        progress('Uploading receipts to Drive… (' + ++n + '/' + need + ')');
         list.push(await ensureDrive(it));
       } else list.push(it);
     }
-    progress('Sheet likhi ja rahi hai…');
+    progress('Updating Google Sheets…');
     await sheetReplaceAll(list);
     q = q.filter((j) => j.kind !== 'upsert'); // sab likh diya
     saveQ();

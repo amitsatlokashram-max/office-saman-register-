@@ -209,7 +209,7 @@ export function DemandList() {
     e.preventDefault();
 
     if (!item.trim()) {
-      toast('Saman ka naam likhna zaroori hai.');
+      toast('An item name is required.');
       return;
     }
 
@@ -231,7 +231,7 @@ export function DemandList() {
         createdAt: new Date().toISOString(),
       });
 
-      toast('Demand list mein jud gaya!');
+      toast('Added to the request list.');
 
       setItem('');
       setCategory('General');
@@ -240,7 +240,7 @@ export function DemandList() {
       setLink('');
       setNote('');
     } catch {
-      toast('Save nahi hua, dubara try karein.');
+      toast('Could not save. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -253,7 +253,7 @@ export function DemandList() {
   ) {
     if (
       !window.confirm(
-        `Kya aap "${itemName}" ko demand list se hatana chahte hain?`
+        `Remove "${itemName}" from the request list?`
       )
     ) {
       return;
@@ -264,9 +264,9 @@ export function DemandList() {
 
       await deleteDoc(doc(db, 'demands', id));
 
-      toast(`"${itemName}" demand list se hata diya gaya.`);
+      toast(`"${itemName}" removed from the request list.`);
     } catch {
-      toast('Delete karne mein dikkat aayi.');
+      toast('Could not delete the request.');
     }
   }
 
@@ -288,7 +288,7 @@ export function DemandList() {
     if (!editingItem) return;
 
     if (!editItemName.trim()) {
-      toast('Saman ka naam likhna zaroori hai.');
+      toast('An item name is required.');
       return;
     }
 
@@ -311,10 +311,10 @@ export function DemandList() {
         }
       );
 
-      toast('Demand update ho gayi!');
+      toast('Request updated.');
       setEditingItem(null);
     } catch {
-      toast('Update nahi ho paya.');
+      toast('Could not update the item.');
     } finally {
       setEditLoading(false);
     }
@@ -421,11 +421,11 @@ export function DemandList() {
     if (!d || receiveLock.current) return;
 
     if (receiveBillUploadLock.current) {
-      setReceiveError('Bill upload hone do, phir delivery save karo.');
+      setReceiveError('Wait for the receipt upload to finish before saving the delivery.');
       return;
     }
     if (!receiveLines.length) {
-      setReceiveError('Kam se kam ek demand item jodo.');
+      setReceiveError('Add at least one requested item.');
       return;
     }
 
@@ -443,18 +443,18 @@ export function DemandList() {
     })) : [];
     const badLine = lines.find((line) => !line.demand || !Number.isFinite(line.qty) || line.qty <= 0 || !Number.isFinite(line.onlineRate) || line.onlineRate < 0 || !Number.isFinite(line.rate) || line.rate < 0);
     if (badLine) {
-      setReceiveError('Har line me demand, Mili Qty aur Online Price / Actual Rate zero ya usse zyada sahi likho.');
+      setReceiveError('For each line, enter a valid requested item, received quantity, online price, and actual rate (zero or more).');
       return;
     }
     if (hasTripExpenses && (!expenses.length || expenses.some((expense) =>
       !expense.date || !Number.isFinite(expense.amount) || expense.amount <= 0 ||
       (expense.type === 'Other' && !expense.description)
     ))) {
-      setReceiveError('Har trip expense ki date, type aur sahi amount bharo; Other ke liye kharche ka naam bhi likho.');
+      setReceiveError('Enter a valid date, type, and amount for each trip expense. For Other, also enter an expense description.');
       return;
     }
     if (!receiveDate || !receiveTime || !receiveOrderDate) {
-      setReceiveError('Kharid aur aane ki tareekh aur samay likhna zaroori hai.');
+      setReceiveError('Purchase date, delivery date, and time are required.');
       return;
     }
 
@@ -486,7 +486,7 @@ export function DemandList() {
         const currentById = new Map<string, Record<string, unknown>>();
         for (const [index, id] of uniqueDemandIds.entries()) {
           const snap = demandSnaps[index];
-          if (!snap.exists()) throw new Error('Ek demand list mein nahi mili.');
+          if (!snap.exists()) throw new Error('A requested item was not found in the list.');
           currentById.set(id, snap.data());
         }
 
@@ -496,7 +496,7 @@ export function DemandList() {
         }
         for (const [id, adding] of receivedByDemand) {
           const current = currentById.get(id);
-          if (!current) throw new Error('Ek demand list mein nahi mili.');
+          if (!current) throw new Error('A requested item was not found in the list.');
           const requested = Math.max(0, num(current.qty));
           const currentReceived = Number.isFinite(current.receivedQty)
             ? Math.max(0, num(current.receivedQty))
@@ -504,8 +504,8 @@ export function DemandList() {
               ? requested
               : 0;
           const outstanding = Math.max(0, requested - currentReceived);
-          if (outstanding <= 0) throw new Error(`${String(current.item || 'Saman')} ki demand pehle hi poori aa chuki hai.`);
-          if (adding > outstanding) throw new Error(`${String(current.item || 'Saman')}: is demand me abhi sirf ${outstanding} pcs baaki hain.`);
+          if (outstanding <= 0) throw new Error(`The request for ${String(current.item || 'item')} has already been fulfilled.`);
+          if (adding > outstanding) throw new Error(`${String(current.item || 'Item')}: only ${outstanding} pcs remain on this request.`);
         }
 
         const lastNumber = Math.max(
@@ -583,9 +583,9 @@ export function DemandList() {
       receiveBillsRef.current = [];
       setReceiveBills([]);
       setReceivingDemand(null);
-      toast(`Delivery ${result.arrivalNo} Stock mein jud gayi · Total ${inr(result.total)}${result.outstanding ? ` · ${result.outstanding} pcs demand baaki` : ''}`);
+      toast(`Delivery ${result.arrivalNo} added to stock · Total ${inr(result.total)}${result.outstanding ? ` · ${result.outstanding} pcs still requested` : ''}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Stock mein add nahi ho paya.';
+      const message = error instanceof Error ? error.message : 'Could not add items to stock.';
       setReceiveError(message);
       toast(message);
     } finally {
@@ -635,7 +635,7 @@ export function DemandList() {
   // WhatsApp Share - original behaviour
   function shareWhatsApp() {
     if (!pendingList.length) {
-      toast('Koi pending demand nahi hai.');
+      toast('There are no pending requests.');
       return;
     }
 
@@ -662,15 +662,15 @@ export function DemandList() {
       )
       .join('\n\n');
 
-    const msg = `📋 *OFFICE SAMAN ORDER DEMAND LIST*
+    const msg = `📋 *OFFICE SUPPLIES ORDER REQUEST LIST*
 📅 Date: ${getTodayStr()}
-💰 *Kul Anumanit Kharcha: ₹${grandTotal.toLocaleString(
+💰 *Estimated Total: ₹${grandTotal.toLocaleString(
       'en-IN'
     )}*
 
 ${text}
 
-_Bhejnewala: ${me?.email || 'Office'}_`;
+_Sent by: ${me?.email || 'Office'}_`;
 
     window.open(
       `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`,
@@ -682,7 +682,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
   function handleDownloadPdf() {
     if (!pendingList.length) {
       toast(
-        'Download karne ke liye koi pending demand nahi hai.'
+        'There are no pending requests to download.'
       );
       return;
     }
@@ -738,7 +738,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
   // FINAL PRINT
   function printSelectedPdf() {
     if (!selectedPdfItems.length) {
-      toast('PDF ke liye kam se kam ek saman chunein.');
+      toast('Select at least one item for the PDF.');
       return;
     }
 
@@ -830,7 +830,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
           gap: '10px',
         }}
       >
-        <h2>🛒 Naya Saman Demand / Requisition</h2>
+        <h2>🛒 New Item Request / Requisition</h2>
 
         <div
           style={{
@@ -884,7 +884,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
             fontSize: '15px',
           }}
         >
-          Naye Saman ki Demand List Jodein
+          Add Items to the Request List
         </h3>
 
         <div
@@ -898,7 +898,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
         >
           <input
             type="text"
-            placeholder="Saman ka Naam *"
+            placeholder="Item name *"
             value={item}
             onChange={(e) => setItem(e.target.value)}
             required
@@ -999,7 +999,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
         >
           {loading
             ? 'Adding...'
-            : '+ Demand List mein Jodein'}
+            : '+ Add to Request List'}
         </button>
       </form>
 
@@ -1019,7 +1019,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
       >
         <input
           type="text"
-          placeholder="🔍 Search saman, note ya category..."
+          placeholder="🔍 Search items, notes, or categories..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{
@@ -1097,7 +1097,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                 margin: 0,
               }}
             >
-              ✏️ Demand Edit Karein: {editingItem.item}
+              ✏️ Edit Request: {editingItem.item}
             </h3>
 
             <button
@@ -1127,7 +1127,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
             >
               <input
                 type="text"
-                placeholder="Saman ka Naam"
+                placeholder="Item name"
                 value={editItemName}
                 onChange={(e) =>
                   setEditItemName(e.target.value)
@@ -1242,7 +1242,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
               >
                 {editLoading
                   ? 'Saving...'
-                  : '✓ Changes Save Karein'}
+                  : '✓ Save Changes'}
               </button>
 
               <button
@@ -1275,7 +1275,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="PDF ke liye saman chunein"
+            aria-label="Select items for PDF"
             style={{
               background: '#0f172a',
               color: '#f8fafc',
@@ -1305,7 +1305,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                   color: '#fff',
                 }}
               >
-                📄 PDF ke liye Saman Chunein
+                📄 Select Items for PDF
               </h2>
 
               <button
@@ -1330,8 +1330,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                 fontSize: '13px',
               }}
             >
-              Jis saman ko PDF mein dikhana hai,
-              uske aage tick karein.
+              Select the items you want to include in the PDF.
             </p>
 
             {/* SELECT ALL BUTTONS */}
@@ -1438,7 +1437,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                         marginTop: '4px',
                       }}
                     >
-                      {d.category || 'General'} | Qty: {remainingDemandQty(d)} baaki
+                      {d.category || 'General'} | Qty: {remainingDemandQty(d)} remaining
                       {d.rate
                         ? ` | Est: ${inr(d.rate * remainingDemandQty(d))}`
                         : ''}
@@ -1488,7 +1487,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                       color: '#fff',
                     }}
                   >
-                    PDF mein Email (By:) dikhana hai?
+                    Show email (By:) in the PDF?
                   </strong>
 
                   <small
@@ -1499,10 +1498,10 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                     }}
                   >
                     {showEmailOnSlip
-                      ? `Haan - ${
+                      ? `Yes - ${
                           me?.email || 'Office'
                         }`
-                      : 'Nahi - PDF mein By aur Email nahi aayega'}
+                      : 'No - By and email will not appear in the PDF'}
                   </small>
                 </span>
               </label>
@@ -1899,7 +1898,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
               color: '#000',
             }}
           >
-            Kul Anumanit Kharcha: ₹
+            Estimated Total: ₹
             {printableTotal.toLocaleString('en-IN')}
           </div>
         )}
@@ -1912,7 +1911,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
           marginBottom: '10px',
         }}
       >
-        Mangwaya Jane Wala Saman ({pendingList.length})
+        Requested Items ({pendingList.length})
       </h3>
 
       {pendingList.length === 0 ? (
@@ -1924,8 +1923,8 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
         >
           {searchQuery ||
           selectedCategoryFilter !== 'All'
-            ? 'Koi match karne wali demand nahi mili.'
-            : 'Abhi koi pending demand nahi hai.'}
+            ? 'No matching requests found.'
+            : 'There are no pending requests.'}
         </p>
       ) : (
         <div
@@ -2001,7 +2000,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                       color: '#94a3b8',
                     }}
                   >
-                    Mangaya:
+                    Requested:
                   </span>{' '}
                   <strong
                     style={{
@@ -2017,7 +2016,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                     </>
                   )}
                   <span style={{ marginLeft: '12px', color: '#fbbf24' }}>
-                    Baaki: {remainingDemandQty(d)} pcs
+                    Remaining: {remainingDemandQty(d)} pcs
                   </span>
 
                   {d.rate ? (
@@ -2123,7 +2122,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                     fontSize: '12px',
                   }}
                 >
-                  ✓ Saman Aa Gaya
+                  ✓ Items Received
                 </button>
               </div>
             </div>
@@ -2146,7 +2145,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
               color: '#94a3b8',
             }}
           >
-            Pehle Mangwaya Gaya Saman (
+            Previously Requested Items (
             {receivedList.length})
           </summary>
 
@@ -2191,7 +2190,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                       color: '#4ade80',
                     }}
                   >
-                    ✓ Main Stock mein jud gaya
+                    ✓ Added to Main Stock
                   </span>
 
                   <button
@@ -2220,26 +2219,26 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
         <div className="notice no-print" role="status">
           {savedDelivery && <><strong>{savedDelivery.arrivalNo}</strong>{' · '}</>}
           {!google.enabled
-            ? 'Google Sheet sync chalu nahi hai.'
+            ? 'Google Sheets sync is not configured.'
             : savedDelivery?.itemIds.some((id) => google.sync.pendingIds.includes(id))
               ? google.sync.running
-                ? 'Google Sheet me sync ho raha hai…'
+                ? 'Syncing to Google Sheets…'
                 : google.sync.lastErr
-                  ? 'Google Sheet sync pending hai; retry kar sakte hain.'
-                  : 'Google Sheet sync pending hai.'
+                  ? 'Google Sheets sync is pending; you can retry.'
+                  : 'Google Sheets sync is pending.'
                 : savedDelivery && google.sync.pendingIds.length > 0
-                  ? 'Is delivery ka sync ho gaya; doosri Sheet entries pending hain.'
+                  ? 'This delivery synced; other spreadsheet entries are still pending.'
                   : !savedDelivery && google.sync.pendingIds.length > 0
                     ? google.sync.running
-                      ? 'Google Sheet me sync ho raha hai…'
+                      ? 'Syncing to Google Sheets…'
                       : google.sync.lastErr
-                        ? 'Google Sheet sync pending hai; retry kar sakte hain.'
-                        : 'Google Sheet sync pending hai.'
+                        ? 'Google Sheets sync is pending; you can retry.'
+                        : 'Google Sheets sync is pending.'
                 : google.sync.lastErr
-                  ? 'Google Sheet sync me dikkat hai.'
+                  ? 'Google Sheets sync failed.'
                 : savedDelivery?.queued
-                  ? 'Google Sheet me sync ho gaya.'
-                  : 'Google Sheet sync ke liye entries load ho rahi hain…'}
+                  ? 'Synced to Google Sheets.'
+                  : 'Loading entries for Google Sheets sync…'}
           {google.enabled && google.sync.pendingIds.length > 0 && (
             <button type="button" className="btn sm" style={{ marginLeft: 10 }} onClick={() => google.sync.pendingIds.forEach(queueUpsert)}>
               <Icon name="undo" />
@@ -2260,10 +2259,10 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
           <form noValidate onSubmit={handleReceiveDemand}>
             <div className="mhead">
               <div>
-                <h2 id="receiveDemandTitle">Saman Aa Gaya</h2>
-                <p className="msub">Is demand ki is baar aayi quantity ko alag AWK entry me save karo.</p>
+                <h2 id="receiveDemandTitle">Receive Items</h2>
+                <p className="msub">Save the quantity received for this request as a separate AWK entry.</p>
               </div>
-              <button type="button" className="iconbtn" onClick={closeReceiveForm} aria-label="Band karo" disabled={receiveSaving || receiveBillUploading}>
+              <button type="button" className="iconbtn" onClick={closeReceiveForm} aria-label="Close" disabled={receiveSaving || receiveBillUploading}>
                 <Icon name="x" />
               </button>
             </div>
@@ -2271,27 +2270,27 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
             <div className="mbody">
               <div className="fgrid">
                 <div className="field">
-                  <label htmlFor="receive-order-date">Kab kharida</label>
+                  <label htmlFor="receive-order-date">Purchase date</label>
                   <input id="receive-order-date" type="date" value={receiveOrderDate} onChange={(e) => setReceiveOrderDate(e.target.value)} />
                 </div>
                 <div className="field">
-                  <label htmlFor="receive-date">Saman Milne ki Date</label>
+                  <label htmlFor="receive-date">Received date</label>
                   <input id="receive-date" type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} required />
                 </div>
                 <div className="field">
-                  <label htmlFor="receive-time">Pahunchne ka samay</label>
+                  <label htmlFor="receive-time">Delivery time</label>
                   <input id="receive-time" type="time" value={receiveTime} onChange={(e) => setReceiveTime(e.target.value)} required />
                 </div>
                 <div className="field">
-                  <label htmlFor="receive-brought-by">Kisne Laya</label>
+                  <label htmlFor="receive-brought-by">Brought by</label>
                   <input id="receive-brought-by" value={receiveBroughtBy} onChange={(e) => setReceiveBroughtBy(e.target.value)} />
                 </div>
                 <div className="field">
-                  <label htmlFor="receive-vendor">Dukaan / Supplier</label>
+                  <label htmlFor="receive-vendor">Store / Supplier</label>
                   <input id="receive-vendor" value={receiveVendor} onChange={(e) => setReceiveVendor(e.target.value)} />
                 </div>
                 <div className="field">
-                  <label htmlFor="receive-by">Office me kisne liya</label>
+                  <label htmlFor="receive-by">Received by</label>
                   <input id="receive-by" value={receiveBy} onChange={(e) => setReceiveBy(e.target.value)} />
                 </div>
                 <div className="field">
@@ -2302,7 +2301,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
               <div className="field">
                 <button type="button" className="btn sm" onClick={() => receiveBillInputRef.current?.click()} disabled={receiveBillUploading || receiveSaving}>
                   <Icon name="clip" />
-                  {receiveBillUploading ? 'Bill upload ho raha…' : '+ Bill Lagao'}
+                  {receiveBillUploading ? 'Uploading receipt…' : '+ Add receipt'}
                 </button>
                 <input
                   ref={receiveBillInputRef}
@@ -2321,7 +2320,7 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                     {receiveBills.map((bill) => (
                       <div className="uitem" key={bill.id}>
                         <span className="nm">{bill.name}</span>
-                        <button type="button" className="iconbtn sm" onClick={() => removeReceiveBill(bill.id)} aria-label="Ye bill hatao" disabled={receiveSaving || receiveBillUploading}>
+                        <button type="button" className="iconbtn sm" onClick={() => removeReceiveBill(bill.id)} aria-label="Remove receipt" disabled={receiveSaving || receiveBillUploading}>
                           <Icon name="x" />
                         </button>
                       </div>
@@ -2332,8 +2331,8 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
 
               <section className="receive-lines">
                 <div className="card-h">
-                  <h3>Saman ki lines</h3>
-                  <span className="muted small">Estimate reference hai; actual rate alag bharo.</span>
+                  <h3>Item lines</h3>
+                  <span className="muted small">The estimate is for reference; enter the actual rate separately.</span>
                 </div>
                 {receiveLines.map((line, index) => {
                   const demand = demands.find((candidate) => candidate.id === line.demandId);
@@ -2344,22 +2343,22 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                     <div className="card receive-line" key={line.key}>
                       <div className="card-h">
                         <strong>{demand?.item || 'Demand item'}</strong>
-                        <button type="button" className="iconbtn sm" onClick={() => setReceiveLines((all) => all.filter((candidate) => candidate.key !== line.key))} aria-label="Ye line hatao" disabled={receiveLines.length === 1}>
+                        <button type="button" className="iconbtn sm" onClick={() => setReceiveLines((all) => all.filter((candidate) => candidate.key !== line.key))} aria-label="Remove line" disabled={receiveLines.length === 1}>
                           <Icon name="x" />
                         </button>
                       </div>
                       <p className="hint">
-                        Mangaya {num(demand?.qty)} · Pehle aa chuka {demand ? receivedQuantity(demand) : 0} · Estimated Rate {inr(num(demand?.rate))} / piece · Ab available {available}
+                        Requested {num(demand?.qty)} · Previously received {demand ? receivedQuantity(demand) : 0} · Estimated rate {inr(num(demand?.rate))} / piece · Available now {available}
                       </p>
                       <div className="fgrid">
                         <div className="field">
-                          <label htmlFor={`receive-qty-${line.key}`}>Mili Qty</label>
+                          <label htmlFor={`receive-qty-${line.key}`}>Received quantity</label>
                           <input id={`receive-qty-${line.key}`} type="number" min="0.01" max={available} step="any" value={line.qty} onChange={(e) => updateReceiveLine(line.key, { qty: e.target.value })} required />
                         </div>
                         <div className="field">
                           <label htmlFor={`receive-online-price-${line.key}`}>Online Price / Piece</label>
                           <input id={`receive-online-price-${line.key}`} type="number" min="0" step="0.01" value={line.onlinePrice} onChange={(e) => updateReceiveLine(line.key, { onlinePrice: e.target.value })} placeholder="Optional" />
-                          {demand?.link && <a href={demand.link} target="_blank" rel="noreferrer">Buy Link kholo</a>}
+                          {demand?.link && <a href={demand.link} target="_blank" rel="noreferrer">Open purchase link</a>}
                         </div>
                         <div className="field">
                           <label htmlFor={`receive-rate-${line.key}`}>Actual Rate / Piece</label>
@@ -2376,12 +2375,12 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
 
                 {demands.some((demand) => remainingDemandQty(demand) > 0) && (
                   <div className="field">
-                    <label htmlFor="receive-add-demand">Isi delivery me ek aur demand item jodo</label>
+                    <label htmlFor="receive-add-demand">Add another requested item to this delivery</label>
                     <select id="receive-add-demand" value="" onChange={(e) => { if (e.target.value) addReceiveLine(e.target.value); }}>
-                      <option value="">Demand item chuno…</option>
-                      {demands.filter((demand) => remainingDemandQty(demand) > 0).map((demand) => <option key={demand.id} value={demand.id}>{demand.item} · Baaki {remainingDemandQty(demand)}</option>)}
+                      <option value="">Select a requested item…</option>
+                      {demands.filter((demand) => remainingDemandQty(demand) > 0).map((demand) => <option key={demand.id} value={demand.id}>{demand.item} · {remainingDemandQty(demand)} remaining</option>)}
                     </select>
-                    <span className="hint">Same item ko do alag rate par mila ho to use dobara chuno.</span>
+                    <span className="hint">Select the same item again if it was received at a different rate.</span>
                   </div>
                 )}
               </section>
@@ -2389,11 +2388,11 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
               <section className="receive-lines trip-expenses">
                 <div className="card-h">
                   <div>
-                    <h3>Kharidne Jaane ka Kharcha</h3>
-                    <span className="muted small">Trip expense item purchase se alag rahega.</span>
+                    <h3>Trip expenses</h3>
+                    <span className="muted small">Trip expenses are recorded separately from item purchases.</span>
                   </div>
                   <label className="field">
-                    <span>Kharcha hua?</span>
+                    <span>Any expenses?</span>
                     <select value={hasTripExpenses ? 'yes' : 'no'} onChange={(e) => {
                       const hasExpenses = e.target.value === 'yes';
                       setHasTripExpenses(hasExpenses);
@@ -2411,13 +2410,13 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                       <div className="card receive-line" key={expense.key}>
                         <div className="card-h">
                           <strong>Trip expense {index + 1}</strong>
-                          <button type="button" className="iconbtn sm" onClick={() => setReceiveExpenses((all) => all.filter((candidate) => candidate.key !== expense.key))} aria-label="Ye kharcha hatao">
+                          <button type="button" className="iconbtn sm" onClick={() => setReceiveExpenses((all) => all.filter((candidate) => candidate.key !== expense.key))} aria-label="Remove this expense">
                             <Icon name="x" />
                           </button>
                         </div>
                         <div className="fgrid">
                           <div className="field">
-                            <label htmlFor={`receive-expense-date-${expense.key}`}>Kharch ki Date</label>
+                            <label htmlFor={`receive-expense-date-${expense.key}`}>Expense date</label>
                             <input id={`receive-expense-date-${expense.key}`} type="date" value={expense.date} onChange={(e) => updateReceiveExpense(expense.key, { date: e.target.value })} required />
                           </div>
                           <div className="field">
@@ -2426,13 +2425,13 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
                               <option>Petrol</option>
                               <option>Diesel</option>
                               <option>Parking</option>
-                              <option>Kiraya</option>
+                              <option>Freight</option>
                               <option>Other</option>
                             </select>
                           </div>
                           {expense.type === 'Other' && (
                             <div className="field">
-                              <label htmlFor={`receive-expense-description-${expense.key}`}>Kharcha kis cheez ka</label>
+                              <label htmlFor={`receive-expense-description-${expense.key}`}>Expense description</label>
                               <input id={`receive-expense-description-${expense.key}`} value={expense.description} onChange={(e) => updateReceiveExpense(expense.key, { description: e.target.value })} required />
                             </div>
                           )}
@@ -2460,16 +2459,16 @@ _Bhejnewala: ${me?.email || 'Office'}_`;
 
               <div className="field">
                 <label htmlFor="receive-note">Note</label>
-                <textarea id="receive-note" rows={2} value={receiveNote} onChange={(e) => setReceiveNote(e.target.value)} placeholder="Koi saman abhi aana baaki ho to likhein…" />
+                <textarea id="receive-note" rows={2} value={receiveNote} onChange={(e) => setReceiveNote(e.target.value)} placeholder="Add a note if any items are still outstanding…" />
               </div>
               {receiveError && <p className="ferr" role="alert">{receiveError}</p>}
             </div>
 
             <div className="mfoot">
-              <button type="button" className="btn" onClick={closeReceiveForm} disabled={receiveSaving || receiveBillUploading}>Rehne do</button>
+              <button type="button" className="btn" onClick={closeReceiveForm} disabled={receiveSaving || receiveBillUploading}>Cancel</button>
               <button type="submit" className="btn primary" disabled={receiveSaving || receiveBillUploading}>
                 <Icon name="check" />
-                {receiveSaving ? 'Save ho raha…' : 'AWK ke saath save karo'}
+                {receiveSaving ? 'Saving…' : 'Save with AWK'}
               </button>
             </div>
           </form>

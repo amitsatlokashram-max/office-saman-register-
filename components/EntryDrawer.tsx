@@ -25,7 +25,7 @@ type Props = {
 
 export function EntryDrawer(props: Props) {
   return (
-    <Dialog open={!!props.id} onClose={props.onClose} className="drawer" label="Entry ki puri detail" backdropClose>
+    <Dialog open={!!props.id} onClose={props.onClose} className="drawer" label="Full entry details" backdropClose>
       {props.id && <DrawerBody key={props.id} {...props} id={props.id} />}
     </Dialog>
   );
@@ -45,7 +45,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
   const save = useSave();
   const [ui, setUi] = useState<UI>({});
   
-  // Kisko diya edit state
+  // Issue recipient edit state
   const [editIssueId, setEditIssueId] = useState<string | null>(null);
   const [editPerson, setEditPerson] = useState('');
   const [editDept, setEditDept] = useState('');
@@ -68,14 +68,14 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       <div className="dwrap">
         <div className="dhead">
           <div>
-            <h2>Entry nahi mili</h2>
+            <h2>Entry not found</h2>
           </div>
-          <button type="button" className="iconbtn" onClick={onClose} aria-label="Band karo">
+          <button type="button" className="iconbtn" onClick={onClose} aria-label="Close">
             <Icon name="x" />
           </button>
         </div>
         <div className="dscroll">
-          <p className="muted">Ye entry ab register me nahi hai. Shayad delete ho gayi.</p>
+          <p className="muted">This entry is no longer in the register. It may have been deleted.</p>
         </div>
       </div>
     );
@@ -105,12 +105,12 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
 
   async function saveIssue(iid: string) {
     if (!editPerson.trim()) {
-      toast('Naam likhna zaroori hai.');
+      toast('A name is required.');
       return;
     }
     const q = num(editQty);
     if (q <= 0) {
-      toast('Piece kam se kam 1 hona chahiye.');
+      toast('Quantity must be at least 1.');
       return;
     }
     const cur = getItem(id);
@@ -119,7 +119,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
     const oldQty = oldIss ? num(oldIss.qty) : 0;
     const diff = q - oldQty;
     if (diff > 0 && remaining(cur) < diff) {
-      toast('Itne piece stock me bache nahi hain.');
+      toast('There is not enough stock remaining.');
       return;
     }
 
@@ -137,7 +137,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
         }
         return i;
       });
-    }, 'Badlav save ho gaye');
+    }, 'Changes saved');
     setEditIssueId(null);
   }
 
@@ -145,7 +145,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
     patchUi({ confirmIssue: null });
     await update((d) => {
       d.issues = d.issues.filter((i) => i.id !== iid);
-    }, 'Hata diya');
+    }, 'Removed');
   }
 
   async function deleteMove(mid: string) {
@@ -156,13 +156,13 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
     if (mv && mv.type === 'back') {
       const after = { ...cur, moves: cur.moves.filter((m) => m.id !== mid) };
       if (remaining(after) < 0) {
-        toast('Pehle jo piece diye ya kharab likhe hai unhe hatao, warna stock minus ho jayega.');
+        toast('Remove the issued or damaged quantity first to prevent negative stock.');
         return;
       }
     }
     await update((d) => {
       d.moves = d.moves.filter((m) => m.id !== mid);
-    }, 'Hata diya');
+    }, 'Removed');
   }
 
   async function deleteBill(bid: string) {
@@ -175,7 +175,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
     try {
       await save(d);
       if (bill) removeBill(bill, items, id);
-      toast('Bill hata diya');
+      toast('Receipt removed');
     } catch (e) {
       toast(explain(e));
     }
@@ -189,7 +189,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       queueEntryDelete(cur, items);
       cur.bills.forEach((b) => delBillIfUnused(b.id, items, id));
       onClose();
-      toast('Entry delete ho gayi');
+      toast('Entry deleted');
     } catch (e) {
       toast(explain(e));
     }
@@ -203,7 +203,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       const cur = getItem(id);
       if (!cur) return;
       if (!bn) {
-        toast('Bill me bill no. nahi mila. Edit karke khud likh do.');
+        toast('No receipt number found. Edit the entry to enter it manually.');
         return;
       }
       if (cur.billNo) return;
@@ -211,7 +211,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       d.billNo = bn;
       if (res.vendor && !d.vendor) d.vendor = String(res.vendor).trim().slice(0, 80);
       await save(d);
-      toast('Bill no. bhar diya: ' + bn);
+      toast('Receipt number added: ' + bn);
     } catch (e) {
       if (errCode(e) !== 'cancelled') toast(errCode(e) === 'permission-denied' ? explain(e) : explainAi(e));
     } finally {
@@ -242,7 +242,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       try {
         await save(d);
         saved = true;
-        toast(added.length + ' bill lag gaya');
+        toast(added.length + ' receipt(s) attached');
       } catch (e) {
         added.forEach((b) => delBill(b.id));
         toast(explain(e));
@@ -257,7 +257,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       const v = await getBill(b.id);
       onViewBill({ url: v.url, name: b.name });
     } catch {
-      toast('Bill nahi khula.');
+      toast('Could not open the receipt.');
     }
   }
   async function openPdf(b: Bill) {
@@ -268,7 +268,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       else window.open(v.url, '_blank');
     } catch {
       w?.close();
-      toast('Bill nahi khula.');
+      toast('Could not open the receipt.');
     }
   }
   async function downloadBill(b: Bill) {
@@ -276,7 +276,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       const v = await getBill(b.id);
       saveFile(b.name.replace(/\.[^.]+$/, '') + '.' + billExt(b.type), v.blob);
     } catch {
-      toast('Bill download nahi hua.');
+      toast('Could not download the receipt.');
     }
   }
 
@@ -290,36 +290,36 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
   const moves = it.moves.slice().sort((a, b) => a.date.localeCompare(b.date));
 
   const facts: { k: string; v: ReactNode; cls?: string }[] = [
-    { k: 'Kab mangaya', v: fdate(it.orderDate) || '—' },
+    { k: 'Order date', v: fdate(it.orderDate) || '—' },
     {
-      k: 'Kab pahuncha',
+      k: 'Received date',
       v: it.receivedDate ? (
         fdate(it.receivedDate)
       ) : (
         <>
-          <span className="pend">Abhi nahi aaya</span>
-          <button type="button" className="btn sm" onClick={() => update((d) => { d.receivedDate = today(); }, 'Pahuncha: aaj ki tareekh lag gayi')}>
+          <span className="pend">Not received</span>
+          <button type="button" className="btn sm" onClick={() => update((d) => { d.receivedDate = today(); }, 'Received today')}>
             <Icon name="check" />
-            Aaj aa gaya
+            Received today
           </button>
         </>
       ),
     },
-    { k: 'Kahan se mangaya', v: it.vendor || '—' },
-    { k: 'Kisne laya', v: it.broughtBy || '—' },
+    { k: 'Supplier', v: it.vendor || '—' },
+    { k: 'Brought by', v: it.broughtBy || '—' },
     { k: 'Bill / Order no.', v: it.billNo || '—' },
     {
-      k: 'Mera paisa',
+      k: 'Reimbursement',
       cls: 'wide',
       v: mp.mine ? (
         <>
           <span>
-            Maine diye <b>{inr(mp.paid)}</b> · Mile <b>{inr(mp.back)}</b>
+            Paid <b>{inr(mp.paid)}</b> · Reimbursed <b>{inr(mp.back)}</b>
             {it.myBackDate && mp.back > 0 ? ' (' + fdate(it.myBackDate) + ')' : ''}
           </span>
           {mp.due > 0 ? (
             <>
-              <span className="stamp low">{inr(mp.due)} baaki</span>
+              <span className="stamp low">{inr(mp.due)} outstanding</span>
               <button
                 type="button"
                 className="btn sm"
@@ -330,19 +330,19 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                     d.myPaid = m.paid;
                     d.myBack = m.paid;
                     d.myBackDate = today();
-                  }, 'Likh diya: saare paise wapas mil gaye')
+                  }, 'Marked as fully reimbursed')
                 }
               >
                 <Icon name="check" />
-                Sab mil gaye
+                Mark fully reimbursed
               </button>
             </>
           ) : (
-            <span className="stamp ok">Sab mil gaye</span>
+            <span className="stamp ok">Fully reimbursed</span>
           )}
         </>
       ) : (
-        'Maine nahi diye (dukaan ya laane wale ne khud liye)'
+        'Not paid personally (paid by supplier or carrier)'
       ),
     },
   ];
@@ -352,7 +352,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       v: (
         <>
           {fdate(it.warrantyTill)}{' '}
-          {war && <span className={'stamp ' + war.cls}>{war.key === 'ok' ? war.n + ' din baaki' : war.label}</span>}
+          {war && <span className={'stamp ' + war.cls}>{war.key === 'ok' ? war.n + ' days remaining' : war.label}</span>}
         </>
       ),
     });
@@ -367,14 +367,14 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
             Entry #{String(nos[it.id] || 0).padStart(3, '0')}
             {it.category ? ' · ' + it.category : ''}
           </p>
-          <h2>{it.item || '(bina naam)'}</h2>
+          <h2>{it.item || '(Unnamed item)'}</h2>
           <div className="stamps">
             <span className={'stamp ' + st.cls}>{st.label}</span>
-            {mp.due > 0 && <span className="stamp low">Mere {inr(mp.due)} baaki</span>}
+            {mp.due > 0 && <span className="stamp low">{inr(mp.due)} reimbursement due</span>}
             {war && war.key !== 'ok' && <span className={'stamp ' + war.cls}>{war.label}</span>}
           </div>
         </div>
-        <button type="button" className="iconbtn" onClick={onClose} aria-label="Band karo">
+        <button type="button" className="iconbtn" onClick={onClose} aria-label="Close">
           <Icon name="x" />
         </button>
       </div>
@@ -398,17 +398,17 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
 
         <section className="dsec">
           <div className="dsec-h">
-            <h3>Kisko diya</h3>
+            <h3>Issued items</h3>
             <span className="grow">
-              {Math.max(rem, 0)} bache · {num(it.qty)} me se
+              {Math.max(rem, 0)} remaining of {num(it.qty)}
             </span>
-            <button type="button" className="btn sm primary" onClick={() => onIssue(id)} disabled={rem <= 0} title={rem > 0 ? undefined : 'Stock me kuch nahi bacha'}>
+            <button type="button" className="btn sm primary" onClick={() => onIssue(id)} disabled={rem <= 0} title={rem > 0 ? undefined : 'No stock remaining'}>
               <Icon name="give" />
-              Kisi ko do
+              Issue item
             </button>
             <button type="button" className="btn sm" onClick={() => onMove(id)} disabled={rem <= 0 && backLimit <= 0}>
               <Icon name="undo" />
-              Wapas / kharab
+              Return / mark damaged
             </button>
           </div>
           {issues.length ? (
@@ -420,7 +420,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <input
                           type="text"
-                          placeholder="Kisko diya (Naam)"
+                          placeholder="Issued to (name)"
                           value={editPerson}
                           onChange={(e) => setEditPerson(e.target.value)}
                           style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' }}
@@ -458,10 +458,10 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                       />
                       <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                         <button type="button" className="btn sm primary" onClick={() => saveIssue(is.id)}>
-                          Save karo
+                          Save
                         </button>
                         <button type="button" className="btn sm" onClick={() => setEditIssueId(null)}>
-                          Radd karo
+                          Cancel
                         </button>
                       </div>
                     </div>
@@ -469,25 +469,25 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                     <>
                       <div className="iss-main">
                         <strong>{[is.person, is.dept].filter(Boolean).join(' · ') || '—'}</strong>
-                        <small>{[fdate(is.date), is.note, is.byName ? 'likha: ' + is.byName : ''].filter(Boolean).join(' · ')}</small>
+                        <small>{[fdate(is.date), is.note, is.byName ? 'recorded by ' + is.byName : ''].filter(Boolean).join(' · ')}</small>
                       </div>
                       {ui.confirmIssue === is.id ? (
                         <div className="inline-confirm">
-                          <span>Hatao?</span>
+                          <span>Remove?</span>
                           <button type="button" className="btn sm danger" onClick={() => deleteIssue(is.id)}>
-                            Haan
+                            Yes
                           </button>
                           <button type="button" className="btn sm" onClick={() => patchUi({ confirmIssue: null })}>
-                            Nahi
+                            No
                           </button>
                         </div>
                       ) : (
                         <>
                           <span className="iss-qty">{num(is.qty)} pcs</span>
-                          <button type="button" className="iconbtn sm" onClick={() => startEditIssue(is)} aria-label="Edit karo" title="Edit karo">
+                          <button type="button" className="iconbtn sm" onClick={() => startEditIssue(is)} aria-label="Edit" title="Edit">
                             <Icon name="edit" />
                           </button>
-                          <button type="button" className="iconbtn sm" onClick={() => patchUi({ confirmIssue: is.id })} aria-label="Ye entry hatao" title="Hatao">
+                          <button type="button" className="iconbtn sm" onClick={() => patchUi({ confirmIssue: is.id })} aria-label="Remove issue" title="Remove">
                             <Icon name="trash" />
                           </button>
                         </>
@@ -498,7 +498,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
               ))}
             </ul>
           ) : (
-            <p className="dnote">Abhi kisi ko nahi diya.</p>
+            <p className="dnote">Nothing has been issued yet.</p>
           )}
           {moves.length > 0 && (
             <ul className="issues">
@@ -510,12 +510,12 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                   </div>
                   {ui.confirmMove === mv.id ? (
                     <div className="inline-confirm">
-                      <span>Hatao?</span>
+                      <span>Remove?</span>
                       <button type="button" className="btn sm danger" onClick={() => deleteMove(mv.id)}>
-                        Haan
+                        Yes
                       </button>
                       <button type="button" className="btn sm" onClick={() => patchUi({ confirmMove: null })}>
-                        Nahi
+                        No
                       </button>
                     </div>
                   ) : (
@@ -524,7 +524,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                         {mv.type === 'back' ? '+' : '−'}
                         {num(mv.qty)} pcs
                       </span>
-                      <button type="button" className="iconbtn sm" onClick={() => patchUi({ confirmMove: mv.id })} aria-label="Ye entry hatao" title="Hatao">
+                      <button type="button" className="iconbtn sm" onClick={() => patchUi({ confirmMove: mv.id })} aria-label="Remove movement" title="Remove">
                         <Icon name="trash" />
                       </button>
                     </>
@@ -538,10 +538,10 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
         <section className="dsec">
           <div className="dsec-h">
             <h3>Bill</h3>
-            <span className="grow">{it.bills.length} laga hai</span>
+            <span className="grow">{it.bills.length} attached</span>
             <label className="btn sm" htmlFor="d-file">
               <Icon name="clip" />
-              {ui.uploading ? 'Upload ho raha…' : 'Bill lagao'}
+              {ui.uploading ? 'Uploading…' : 'Add receipt'}
             </label>
             <input
               type="file"
@@ -568,7 +568,7 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                         PDF
                       </div>
                     ) : (
-                      <button type="button" className="thumb" onClick={() => viewBill(b)} aria-label="Bill badi karke dekho">
+                      <button type="button" className="thumb" onClick={() => viewBill(b)} aria-label="View receipt">
                         <BillImg id={b.id} alt={b.name} className="bimg" />
                       </button>
                     )}
@@ -578,12 +578,12 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                       </span>
                       {ui.confirmBill === b.id ? (
                         <div className="inline-confirm">
-                          <span>Hatao?</span>
+                          <span>Remove?</span>
                           <button type="button" className="btn sm danger" onClick={() => deleteBill(b.id)}>
-                            Haan
+                            Yes
                           </button>
                           <button type="button" className="btn sm" onClick={() => patchUi({ confirmBill: null })}>
-                            Nahi
+                            No
                           </button>
                         </div>
                       ) : (
@@ -591,18 +591,18 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
                           {isPdf && (
                             <button type="button" className="btn sm" onClick={() => openPdf(b)}>
                               <Icon name="open" />
-                              Kholo
+                              Open
                             </button>
                           )}
                           {b.driveUrl && (
-                            <a className="iconbtn sm" href={b.driveUrl} target="_blank" rel="noopener noreferrer" aria-label="Google Drive me kholo" title="Google Drive me kholo">
+                            <a className="iconbtn sm" href={b.driveUrl} target="_blank" rel="noopener noreferrer" aria-label="Open in Google Drive" title="Open in Google Drive">
                               <Icon name="cloud" />
                             </a>
                           )}
                           <button type="button" className="iconbtn sm" onClick={() => downloadBill(b)} aria-label="Download" title="Download">
                             <Icon name="dl" />
                           </button>
-                          <button type="button" className="iconbtn sm" onClick={() => patchUi({ confirmBill: b.id })} aria-label="Bill hatao" title="Bill hatao">
+                          <button type="button" className="iconbtn sm" onClick={() => patchUi({ confirmBill: b.id })} aria-label="Remove receipt" title="Remove receipt">
                             <Icon name="trash" />
                           </button>
                         </div>
@@ -613,21 +613,21 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
               })}
             </div>
           ) : (
-            <p className="dnote">Abhi koi bill nahi laga.</p>
+            <p className="dnote">No receipt attached yet.</p>
           )}
           {ui.aiReading && (
             <p className="dnote aiwait">
               <span className="spin" />
-              AI bill se bill no. padh raha hai…
+              AI is reading the receipt number…
             </p>
           )}
         </section>
 
         {(it.addedByName || it.createdAt) && (
           <p className="meta">
-            Entry ki: {it.addedByName || '—'}
+            Created by: {it.addedByName || '—'}
             {it.createdAt ? ' · ' + fdate(it.createdAt.slice(0, 10)) : ''}
-            {it.updatedByName && it.updatedBy !== it.addedBy ? ' · Aakhri badlav: ' + it.updatedByName : ''}
+            {it.updatedByName && it.updatedBy !== it.addedBy ? ' · Last updated by: ' + it.updatedByName : ''}
           </p>
         )}
       </div>
@@ -635,21 +635,21 @@ function DrawerBody({ id, onClose, onEdit, onIssue, onMove, onViewBill }: Props 
       <div className="dfoot">
         {ui.confirmDel ? (
           <div className="confirm">
-            <p>Pakka delete karna hai? Ye entry aur iske bill hamesha ke liye hat jayenge.</p>
+            <p>Delete this entry and its receipts permanently?</p>
             <button type="button" className="btn danger" onClick={deleteEntry}>
-              Haan, delete karo
+              Yes, delete
             </button>
             <button type="button" className="btn" onClick={() => patchUi({ confirmDel: false })}>
-              Nahi
+              Cancel
             </button>
           </div>
         ) : (
           <>
             <button type="button" className="btn primary" onClick={() => onEdit(id)}>
               <Icon name="edit" />
-              Edit karo
+              Edit
             </button>
-            <button type="button" className="btn" id="d-print" onClick={() => printEntry(id)} title="Is entry ki parchi print karo (sign ki jagah ke saath)">
+            <button type="button" className="btn" id="d-print" onClick={() => printEntry(id)} title="Print this entry with a signature area">
               <Icon name="print" />
               Print<span className="hide-xs">parchi</span>
             </button>

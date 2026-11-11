@@ -5,10 +5,10 @@ import './globals.css';
 import Shell from '@/components/Shell';
 
 export const metadata: Metadata = {
-  title: { default: 'Office Saman Register', template: '%s · Office Saman Register' },
-  description: 'Office ke liye mangaye saman ka register: kab aaya, kisne laya, kitne ka, kisko diya, bill, stock aur mera paisa.',
-  applicationName: 'Office Saman Register',
-  appleWebApp: { capable: true, title: 'Saman Register', statusBarStyle: 'black-translucent' },
+  title: { default: 'Office Supplies Register', template: '%s · Office Supplies Register' },
+  description: 'Track office purchases, deliveries, receipts, stock, handovers, and reimbursements in one place.',
+  applicationName: 'Office Supplies Register',
+  appleWebApp: { capable: true, title: 'Office Supplies', statusBarStyle: 'black-translucent' },
 };
 
 export const viewport: Viewport = {
@@ -21,9 +21,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="hi-Latn">
+    <html lang="en">
       <body>
-        {/* Login, menu, data aur saare form ek hi jagah: page badalne pe register dobara load nahi hota */}
         <Shell>{children}</Shell>
       </body>
     </html>

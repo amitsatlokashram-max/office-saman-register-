@@ -21,7 +21,7 @@ export function BillImg({ id, alt, className }: { id: string; alt: string; class
     };
   }, [id, url]);
 
-  if (broken) return <span className={className} data-broken="1" aria-label="Bill nahi mila" />;
+  if (broken) return <span className={className} data-broken="1" aria-label="Receipt not found" />;
   // eslint-disable-next-line @next/next/no-img-element
   return url ? <img className={className} src={url} alt={alt} /> : <span className={className} aria-hidden="true" />;
 }

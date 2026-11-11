@@ -129,7 +129,7 @@ function compareExisting(
   if (existing.some((it) => it.id === entry.id)) {
     return {
       status: 'duplicate',
-      reason: 'Ye Excel row pehle import ho chuki hai',
+      reason: 'This spreadsheet row has already been imported.',
     };
   }
 
@@ -145,14 +145,14 @@ function compareExisting(
   ) {
     return {
       status: 'review',
-      reason: 'Same name, date, quantity, rate aur supplier mila. Duplicate ho sakta hai',
+      reason: 'An entry with the same item, date, quantity, rate, and supplier was found. This may be a duplicate.',
     };
   }
 
   if (existing.some((it) => basicKey(it) === basicKey(entry))) {
     return {
       status: 'review',
-      reason: 'Same name, date aur quantity mili. Purchase verify karein',
+      reason: 'The same item, date, and quantity were found. Verify the purchase.',
     };
   }
 
@@ -165,7 +165,7 @@ function compareExisting(
   ) {
     return {
       status: 'review',
-      reason: 'Same item aur date mili. Quantity compare karein',
+      reason: 'The same item and date were found. Compare the quantities.',
     };
   }
 
@@ -189,7 +189,7 @@ async function createOnlyIfAbsent(item: Item): Promise<void> {
 
     if (snapshot.exists()) {
       throw new Error(
-        `Already imported: ${item.item}. Existing document overwrite nahi kiya.`,
+        `Already imported: ${item.item}. The existing document was not overwritten.`,
       );
     }
 
@@ -228,13 +228,13 @@ export function ImportOldData() {
 
     try {
       if (!/\.xlsx$/i.test(file.name)) {
-        throw new Error('Sirf .xlsx Excel file upload karein.');
+        throw new Error('Upload an Excel .xlsx file.');
       }
 
       const sheet = await readSheet(file, SHEET_NAME);
 
       if (!sheet.length) {
-        throw new Error('Excel Sheet khaali hai.');
+        throw new Error('The spreadsheet is empty.');
       }
 
       const headerIndex = sheet.findIndex((line) =>
@@ -242,7 +242,7 @@ export function ImportOldData() {
       );
 
       if (headerIndex < 0) {
-        throw new Error('Excel mein Item Name header nahi mila.');
+        throw new Error('The spreadsheet is missing the Item Name column header.');
       }
 
       const headers = sheet[headerIndex].map(header);
@@ -258,7 +258,7 @@ export function ImportOldData() {
       ]) {
         if (col(required) < 0) {
           throw new Error(
-            `Excel mein "${required}" column nahi mila.`,
+            `The spreadsheet is missing the "${required}" column.`,
           );
         }
       }
@@ -364,7 +364,7 @@ export function ImportOldData() {
           excelTotal > 0 &&
           Math.abs(qty * rate - excelTotal) > 1
         ) {
-          reasons.push('Rate aur Total match nahi karte');
+          reasons.push('Rate and total do not match.');
           blocked = true;
         }
 
@@ -440,7 +440,7 @@ export function ImportOldData() {
         } else if (seenKeys.has(key)) {
           status = 'review';
           reasons.push(
-            'Same purchase details ki doosri Excel row hai. Verify karein',
+            'Another spreadsheet row has the same purchase details. Please verify.',
           );
         }
 
@@ -460,13 +460,13 @@ export function ImportOldData() {
 
       setRows(result);
       setMessage(
-        `${result.length} entries mili. Ready aur Review dono ko select kar sakte hain.`
+        `${result.length} entries found. You can select both Ready and Review entries.`
       );
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Excel read nahi ho paayi.',
+          : 'Could not read the spreadsheet.',
       );
     } finally {
       setLoading(false);
@@ -521,12 +521,12 @@ export function ImportOldData() {
     );
 
     if (!selectedRows.length) {
-      setMessage('Pehle entries select karein.');
+      setMessage('Select entries first.');
       return;
     }
 
     if (!navigator.onLine) {
-      setMessage('Internet connect karke import karein.');
+      setMessage('Connect to the internet to import.');
       return;
     }
 
@@ -535,11 +535,11 @@ export function ImportOldData() {
     ).length;
 
     const confirmed = window.confirm(
-      `${selectedRows.length} entries Firebase mein add hongi.\n\n` +
+      `${selectedRows.length} entries will be added to Firebase.\n\n` +
       `Review Entries: ${reviewCount}\n\n` +
-      'Dhyan rahe: Review ka matlab possible duplicate ho sakta hai.\n' +
-      'Existing document IDs overwrite nahi hongi.\n\n' +
-      'Kya aapne sab selected entries verify kar li hain?',
+      'Note: Rows marked for review may be duplicates.\n' +
+      'Existing document IDs will not be overwritten.\n\n' +
+      'Have you verified all selected entries?',
     );
 
     if (!confirmed) return;
@@ -553,7 +553,7 @@ export function ImportOldData() {
     try {
       for (const row of selectedRows) {
         if (!navigator.onLine) {
-          throw new Error('Internet disconnect ho gaya.');
+          throw new Error('Internet connection lost.');
         }
 
         /*
@@ -592,7 +592,7 @@ export function ImportOldData() {
                   status: 'done',
                   blocked: true,
                   selected: false,
-                  reason: 'Firebase mein save ho gaya',
+                  reason: 'Saved to Firebase',
                 }
               : r,
           ),
@@ -600,14 +600,14 @@ export function ImportOldData() {
       }
 
       setMessage(
-        `${saved} entries Firebase mein save ho gayi. Saman aur Stock check karein.`,
+        `${saved} entries saved to Firebase. Review Items and Stock.`,
       );
     } catch (error) {
       setMessage(
         (error instanceof Error
           ? error.message
           : 'Import failed') +
-          ' Dobara import karne se pehle register verify karein.',
+          ' Verify the register before importing again.',
       );
     } finally {
       setImporting(false);
@@ -669,13 +669,12 @@ export function ImportOldData() {
       </h2>
 
       <p>
-        Sirf <strong>{SHEET_NAME}</strong> Sheet ka
-        data import hoga.
+        Only data from the <strong>{SHEET_NAME}</strong> sheet will be imported.
       </p>
 
       <p style={{ fontSize: 13, opacity: 0.75 }}>
-        Order aur Sheet7 import nahi hongi.
-        Existing Firebase documents overwrite nahi honge.
+        Orders and Sheet7 will not be imported.
+        Existing Firebase documents will not be overwritten.
       </p>
 
       <label
@@ -705,7 +704,7 @@ export function ImportOldData() {
       )}
 
       {loading && (
-        <p>Excel read ho rahi hai...</p>
+        <p>Reading spreadsheet…</p>
       )}
 
       {rows.length > 0 && (
@@ -770,10 +769,9 @@ export function ImportOldData() {
           </div>
 
           <p style={{ fontSize: 13, opacity: 0.8 }}>
-            Ready aur Review dono ko tick kar sakte hain.
-            Review entries pehle check karein.
-            Invalid quantity/date ya incomplete Given
-            details wali entries disabled rahengi.
+            You can select both Ready and Review entries.
+            Verify Review entries first.
+            Entries with invalid quantities or dates, or incomplete issue details, will be disabled.
           </p>
 
           <div
@@ -787,7 +785,7 @@ export function ImportOldData() {
             <input
               type="search"
               value={search}
-              placeholder="Saman search karo..."
+              placeholder="Search items…"
               onChange={(e) => setSearch(e.target.value)}
               style={{
                 flex: '1 1 180px',
@@ -832,7 +830,7 @@ export function ImportOldData() {
                 <tr>
                   <th>Select</th>
                   <th>Excel No.</th>
-                  <th>Saman</th>
+                  <th>Item</th>
                   <th>Qty</th>
                   <th>Rate</th>
                   <th>Received Date</th>
@@ -906,7 +904,7 @@ export function ImportOldData() {
                 {visibleRows.length === 0 && (
                   <tr>
                     <td colSpan={7}>
-                      Is filter mein koi entry nahi mili.
+                      No entries match these filters.
                     </td>
                   </tr>
                 )}

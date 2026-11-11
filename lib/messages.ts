@@ -1,43 +1,43 @@
 import { errCode } from './errors';
 
 export const PERM_NOTICE =
-  'Aapko is register me likhne ki permission nahi hai. Owner se kaho ki Settings → Team me aapka email jode.';
+  'You do not have permission to edit this register. Ask the owner to add your email under Settings → Team.';
 
 export function explain(e: unknown): string {
   const c = errCode(e);
-  if (c === 'permission-denied') return 'Save nahi hua: aapko is register me likhne ki permission nahi hai.';
-  if (c === 'resource-exhausted') return 'Firebase ki aaj ki free limit poori ho gayi. Kal dobara try karo.';
-  if (c === 'invalid-argument') return 'Save nahi hua: entry bahut badi hai.';
-  if (c === 'unavailable') return 'Internet nahi hai. Net aate hi save ho jayega.';
-  return 'Save nahi hua. Internet check karke dobara try karo.';
+  if (c === 'permission-denied') return 'Could not save: you do not have permission to edit this register.';
+  if (c === 'resource-exhausted') return 'Today’s Firebase free usage limit has been reached. Try again tomorrow.';
+  if (c === 'invalid-argument') return 'Could not save: this entry is too large.';
+  if (c === 'unavailable') return 'You are offline. Changes will sync when you reconnect.';
+  return 'Could not save. Check your internet connection and try again.';
 }
 
 export function explainUpload(e: unknown): string {
   const c = errCode(e);
-  if (c === 'pdf_large') return 'Ye PDF 900 KB se badi hai. Uski photo ya screenshot lagao.';
-  if (c === 'too_large') return 'Ye photo bahut badi hai. Thodi chhoti photo lagao.';
-  if (c === 'unsupported_type') return 'Sirf photo (JPG, PNG) ya PDF bill lag sakta hai.';
-  if (c === 'permission-denied') return 'Bill lagane ki permission nahi hai.';
-  return 'Bill upload nahi hua. Dobara try karo.';
+  if (c === 'pdf_large') return 'This PDF is larger than 900 KB. Upload a photo or screenshot instead.';
+  if (c === 'too_large') return 'This photo is too large. Upload a smaller image.';
+  if (c === 'unsupported_type') return 'Upload a receipt photo (JPG or PNG) or a PDF.';
+  if (c === 'permission-denied') return 'You do not have permission to upload receipts.';
+  return 'Receipt upload failed. Try again.';
 }
 
 export function explainAi(e: unknown): string {
   const c = errCode(e);
-  if (c === 'no_key') return 'AI abhi band hai. Vercel me AI_API_KEY daalo (README dekho).';
-  if (c === 'not_member') return 'AI chalane ki permission nahi mili. Dobara sign in karke try karo.';
-  if (c === 'bad_key') return 'Server pe daali AI key galat hai ya band hai. Vercel me AI_API_KEY check karo.';
-  if (c === 'bad_model') return 'Ye AI model nahi mila. Vercel me AI_MODEL badlo ya khaali chhodo.';
-  if (c === 'rate_limited') return 'AI ki limit abhi poori ho gayi. Thodi der baad dobara try karo.';
-  if (c === 'network') return 'AI tak nahi pahunch paaye. Internet check karo.';
-  if (c === 'bad_request') return 'Ye bill AI ko nahi bheja ja saka. Photo ya PDF dobara lagao.';
-  if (c === 'not-found') return 'Bill nahi mila. Dobara lagao.';
-  return 'Bill se details nahi nikal paayi. Dobara try karo ya form khud bhar lo.';
+  if (c === 'no_key') return 'AI is not configured. Add AI_API_KEY in Vercel (see the README).';
+  if (c === 'not_member') return 'You are not authorized to use AI. Sign in again and retry.';
+  if (c === 'bad_key') return 'The AI key configured on the server is invalid or disabled. Check AI_API_KEY in Vercel.';
+  if (c === 'bad_model') return 'The configured AI model was not found. Update AI_MODEL in Vercel or leave it blank.';
+  if (c === 'rate_limited') return 'The AI usage limit has been reached. Try again shortly.';
+  if (c === 'network') return 'Could not reach the AI service. Check your internet connection.';
+  if (c === 'bad_request') return 'The receipt could not be sent to AI. Upload the photo or PDF again.';
+  if (c === 'not-found') return 'Receipt not found. Upload it again.';
+  return 'Could not read the receipt. Try again or fill in the form manually.';
 }
 
 export function authMsg(e: unknown): string {
   const c = errCode(e);
-  if (c === 'auth/unauthorized-domain') return 'Ye website Firebase me allow nahi hai. README ka "Authorized domains" wala step karo.';
-  if (c === 'auth/network-request-failed') return 'Internet check karo.';
-  if (c === 'auth/operation-not-allowed') return 'Firebase me Google sign-in chalu nahi hai. README ka Step 3 dekho.';
-  return 'Sign in nahi hua. Dobara try karo.';
+  if (c === 'auth/unauthorized-domain') return 'This website is not authorized in Firebase. Follow the "Authorized domains" step in the README.';
+  if (c === 'auth/network-request-failed') return 'Check your internet connection.';
+  if (c === 'auth/operation-not-allowed') return 'Google sign-in is not enabled in Firebase. See Step 3 in the README.';
+  return 'Sign-in failed. Try again.';
 }

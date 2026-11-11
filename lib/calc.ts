@@ -11,16 +11,16 @@ export const FSHOW: Record<Tab, (keyof Filters)[]> = {
 export const EMPTY_FILTERS: Filters = { q: '', month: '', vendor: '', status: '', pay: '', stock: '', dept: '', sort: 'new' };
 
 export const DEF = {
-  category: ['Hard Disk', 'SSD', 'Pen Drive', 'SDI Cable', 'HDMI Cable', 'Computer Parts', 'Live Setup Saman', 'Other'],
-  vendor: ['Amazon', 'Flipkart', 'Nehru Place', 'Local Dukaan'],
+  category: ['Hard Disk', 'SSD', 'Pen Drive', 'SDI Cable', 'HDMI Cable', 'Computer Parts', 'Live Setup Supplies', 'Other'],
+  vendor: ['Amazon', 'Flipkart', 'Nehru Place', 'Local Store'],
   brought: ['Kapil Das', 'Courier / Delivery'],
   dept: ['Live Setup', 'Computer', 'Office'],
 };
 
 export const MOVE: Record<MoveType, string> = {
-  back: 'Wapas aaya (stock me)',
-  damaged: 'Kharab ho gaya',
-  vendor: 'Dukaan ko return',
+  back: 'Returned to stock',
+  damaged: 'Damaged',
+  vendor: 'Returned to vendor',
 };
 
 /* ---------- numbers, dates, text ---------- */
@@ -46,7 +46,7 @@ export function ddmmyyyy(d?: string): string {
 }
 export function mlabel(k: string): string {
   const p = k.split('-').map(Number);
-  return p[0] && p[1] ? MON[p[1] - 1] + ' ' + p[0] : 'Tareekh nahi';
+  return p[0] && p[1] ? MON[p[1] - 1] + ' ' + p[0] : 'Unknown date';
 }
 const z2 = (n: number) => String(n).padStart(2, '0');
 export function today(): string {
@@ -108,20 +108,20 @@ export function myPay(it: Pick<Item, 'iPaid' | 'myPaid' | 'myBack'>): MyPay {
 
 export type Status = { key: 'pending' | 'stock' | 'done'; label: string; cls: string };
 export function status(it: Item): Status {
-  if (!it.receivedDate) return { key: 'pending', label: 'Nahi aaya', cls: 'pending' };
+  if (!it.receivedDate) return { key: 'pending', label: 'Not received', cls: 'pending' };
   const r = remaining(it);
-  if (r > 0) return { key: 'stock', label: 'Stock: ' + r, cls: 'stock' };
-  if (issuedQty(it) - moveSum(it, 'back') > 0) return { key: 'done', label: 'Sab de diya', cls: 'done' };
-  return { key: 'done', label: 'Stock khatam', cls: 'out' };
+  if (r > 0) return { key: 'stock', label: 'In stock: ' + r, cls: 'stock' };
+  if (issuedQty(it) - moveSum(it, 'back') > 0) return { key: 'done', label: 'All issued', cls: 'done' };
+  return { key: 'done', label: 'Out of stock', cls: 'out' };
 }
 
 export type Warranty = { key: 'over' | 'soon' | 'ok'; label: string; cls: string; n: number } | null;
 export function warrantyState(it: Item): Warranty {
   const n = daysTo(it.warrantyTill);
   if (n === null) return null;
-  if (n < 0) return { key: 'over', label: 'Warranty khatam', cls: 'out', n };
-  if (n <= 30) return { key: 'soon', label: 'Warranty ' + n + ' din baaki', cls: 'warn', n };
-  return { key: 'ok', label: 'Warranty ' + fdate(it.warrantyTill) + ' tak', cls: 'ok', n };
+  if (n < 0) return { key: 'over', label: 'Warranty expired', cls: 'out', n };
+  if (n <= 30) return { key: 'soon', label: 'Warranty expires in ' + n + ' days', cls: 'warn', n };
+  return { key: 'ok', label: 'Warranty until ' + fdate(it.warrantyTill), cls: 'ok', n };
 }
 
 export function nextArrivalNo(items: Item[]): string {
@@ -221,12 +221,12 @@ export function stockGroups(items: Item[], minMap: MinMap): StockGroup[] {
     const min = num(minMap[k]);
     const low = min > 0 && g.bacha <= min;
     const st = low
-      ? { cls: 'low', label: 'Kam hai' }
+      ? { cls: 'low', label: 'Low stock' }
       : g.aaya > 0 && g.bacha === 0
-        ? { cls: 'out', label: 'Khatam' }
+        ? { cls: 'out', label: 'Out of stock' }
         : g.aaya === 0
-          ? { cls: 'pending', label: 'Aana baaki' }
-          : { cls: 'stock', label: 'Theek hai' };
+          ? { cls: 'pending', label: 'Awaiting delivery' }
+          : { cls: 'stock', label: 'In stock' };
     return { ...g, min, low, st };
   });
 }
@@ -323,14 +323,14 @@ export function filteredIssues(items: Item[], f: Filters): IssueRow[] {
 export const filtersActive = (f: Filters, tab: Tab) => FSHOW[tab].some((k) => k !== 'sort' && !!f[k].trim());
 
 export const STATUS_LABEL: Record<string, string> = {
-  pending: 'Nahi aaya',
-  stock: 'Stock me hai',
-  done: 'Sab de diya / khatam',
-  warranty: 'Warranty khatam / 30 din me',
-  nobill: 'Bill nahi laga',
+  pending: 'Awaiting delivery',
+  stock: 'In stock',
+  done: 'Fully issued / out of stock',
+  warranty: 'Warranty expired / expires within 30 days',
+  nobill: 'Receipt missing',
 };
-export const PAY_LABEL: Record<string, string> = { baaki: 'Mere paise baaki', mine: 'Maine paise diye', back: 'Paise mil gaye' };
-export const STOCK_LABEL: Record<string, string> = { low: 'Sirf kam stock', out: 'Khatam ho gaya' };
+export const PAY_LABEL: Record<string, string> = { baaki: 'Reimbursement due', mine: 'Paid by me', back: 'Reimbursed' };
+export const STOCK_LABEL: Record<string, string> = { low: 'Low stock only', out: 'Out of stock' };
 
 /** Print pe likhne ke liye: kaun sa filter laga hai. */
 export function filterSummary(f: Filters, tab: Tab): string {
@@ -368,7 +368,7 @@ export function lastMonths(n: number): string[] {
   return out;
 }
 
-const DAYS = ['Ravivaar', 'Somvaar', 'Mangalvaar', 'Budhvaar', 'Guruvaar', 'Shukravaar', 'Shanivaar'];
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 export function dayLong(): string {
   const t = new Date();
   return DAYS[t.getDay()] + ', ' + fdate(today());

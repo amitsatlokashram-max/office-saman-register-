@@ -41,7 +41,7 @@ function Head({
         type="button"
         className="iconbtn"
         onClick={onClose}
-        aria-label="Band karo"
+        aria-label="Close"
       >
         <Icon name="x" />
       </button>
@@ -102,7 +102,7 @@ function IssueForm({
 
     const cur = getItem(itemId);
     if (!cur) {
-      return setErr({ msg: 'Ye entry ab nahi hai.' });
+      return setErr({ msg: 'This entry no longer exists.' });
     }
 
     const chk = checkRows(
@@ -141,11 +141,11 @@ function IssueForm({
         chk.rows.length === 1
           ? chk.total + ' pcs ' +
             (chk.rows[0].person || chk.rows[0].dept) +
-            ' ko diya'
+            ' issued'
           : chk.rows.length +
-            ' logo ko kul ' +
+            ' people, ' +
             chk.total +
-            ' pcs diye'
+            ' pcs issued'
       );
 
       onClose();
@@ -159,10 +159,10 @@ function IssueForm({
     <form id="issueForm" noValidate onSubmit={submit}>
       <Head
         id="issTitle"
-        title="Kisi ko do"
+        title="Issue items"
         sub={
           it0
-            ? it0.item + ' · ' + rem + ' pcs bache hai'
+            ? it0.item + ' · ' + rem + ' pcs remaining'
             : ''
         }
         onClose={onClose}
@@ -170,8 +170,7 @@ function IssueForm({
 
       <div className="mbody">
         <p className="hint">
-          Alag-alag logo ko diya hai to har bande ki
-          alag line jodo.
+          Add a separate line for each person or department receiving items.
         </p>
 
         <IssueRowsEditor
@@ -186,7 +185,7 @@ function IssueForm({
 
         <div className="fgrid">
           <div className="field">
-            <label htmlFor="i-date">Kab diya</label>
+            <label htmlFor="i-date">Date issued</label>
             <input
               id="i-date"
               type="date"
@@ -199,7 +198,7 @@ function IssueForm({
             <label htmlFor="i-note">Note</label>
             <input
               id="i-note"
-              placeholder="Jaise: studio camera 2 ke liye"
+              placeholder="For example: for studio camera 2"
               autoComplete="off"
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -214,7 +213,7 @@ function IssueForm({
           className="btn"
           onClick={onClose}
         >
-          Rehne do
+          Cancel
         </button>
 
         <button
@@ -223,7 +222,7 @@ function IssueForm({
           id="i-save"
           disabled={busy}
         >
-          {busy ? 'Save ho raha…' : 'Save karo'}
+          {busy ? 'Saving…' : 'Save'}
         </button>
       </div>
     </form>
@@ -290,7 +289,7 @@ function MoveForm({
     const cur = getItem(itemId);
 
     if (!cur) {
-      return setErr('Ye entry ab nahi hai.');
+      return setErr('This entry no longer exists.');
     }
 
     const l = moveLimit(cur, type);
@@ -299,14 +298,14 @@ function MoveForm({
     if (l <= 0) {
       return setErr(
         type === 'back'
-          ? 'Is saman me se abhi kisi ko diya hi nahi, to wapas kaise aayega.'
-          : 'Stock me kuch nahi bacha.'
+          ? 'None of this item has been issued, so it cannot be returned.'
+          : 'No stock remaining.'
       );
     }
 
     if (q < 1 || q > l) {
       return setErr(
-        '1 se ' + l + ' ke beech piece likho.'
+        'Enter a quantity between 1 and ' + l + '.'
       );
     }
 
@@ -327,7 +326,7 @@ function MoveForm({
 
     try {
       await save(d);
-      toast(MOVE[type] + ': ' + q + ' pcs likh diya');
+      toast(MOVE[type] + ': ' + q + ' pcs recorded');
       onClose();
     } catch (x) {
       setBusy(false);
@@ -339,13 +338,13 @@ function MoveForm({
     <form id="moveForm" noValidate onSubmit={submit}>
       <Head
         id="mvTitle"
-        title="Wapas / kharab"
+        title="Return / mark damaged"
         sub={
           it0
             ? it0.item +
               ' · ' +
               Math.max(remaining(it0), 0) +
-              ' pcs stock me'
+              ' pcs in stock'
             : ''
         }
         onClose={onClose}
@@ -354,9 +353,7 @@ function MoveForm({
       <div className="mbody">
         <div className="fgrid">
           <div className="field span2">
-            <label htmlFor="m-type">
-              Kya hua?
-            </label>
+            <label htmlFor="m-type">Action</label>
 
             <select
               id="m-type"
@@ -366,22 +363,22 @@ function MoveForm({
               }
             >
               <option value="back">
-                Kisi ne wapas kiya (stock me wapas aaya)
+                Returned to stock
               </option>
 
               <option value="damaged">
-                Kharab ho gaya
+                Damaged
               </option>
 
               <option value="vendor">
-                Dukaan ko wapas bheja (return)
+                Returned to supplier
               </option>
             </select>
           </div>
 
           <div className="field">
             <label htmlFor="m-qty">
-              Kitne piece
+              Quantity
             </label>
 
             <input
@@ -399,19 +396,19 @@ function MoveForm({
 
             <span className="hint">
               {lim > 0
-                ? 'Zyada se zyada ' +
+                ?                 'Maximum ' +
                   lim +
                   (type === 'back'
-                    ? ' (jitne diye the)'
-                    : ' (jitne stock me hai)')
+                    ? ' (up to quantity issued)'
+                    : ' (up to available stock)')
                 : type === 'back'
-                  ? 'Abhi kisi ko diya hi nahi'
-                  : 'Stock me kuch nahi bacha'}
+                  ? 'Nothing has been issued yet'
+                  : 'No stock remaining'}
             </span>
           </div>
 
           <div className="field">
-            <label htmlFor="m-date">Kab</label>
+            <label htmlFor="m-date">Date</label>
 
             <input
               id="m-date"
@@ -428,7 +425,7 @@ function MoveForm({
 
             <input
               id="m-note"
-              placeholder="Kisne wapas kiya, ya kya kharabi hai"
+              placeholder="Who returned it, or describe the damage"
               autoComplete="off"
               value={note}
               onChange={(e) =>
@@ -449,7 +446,7 @@ function MoveForm({
           className="btn"
           onClick={onClose}
         >
-          Rehne do
+          Cancel
         </button>
 
         <button
@@ -458,7 +455,7 @@ function MoveForm({
           id="m-save"
           disabled={busy}
         >
-          {busy ? 'Save ho raha…' : 'Save karo'}
+          {busy ? 'Saving…' : 'Save'}
         </button>
       </div>
     </form>
@@ -532,7 +529,7 @@ function GoogleSection({
 
     setMsg({
       cls: 'hint',
-      text: 'Shuru ho raha hai…',
+      text: 'Starting…',
     });
 
     try {
@@ -547,10 +544,10 @@ function GoogleSection({
 
       setMsg({
         cls: 'okmsg',
-        text: n + ' entries Sheet me likh di.',
+        text: n + ' entries synced to Google Sheets.',
       });
 
-      toast('Google Sheet update ho gayi');
+      toast('Google Sheets updated');
     } catch (e) {
       setMsg({
         cls: 'badmsg',
@@ -566,7 +563,7 @@ function GoogleSection({
   return (
     <section className="setsec card">
       <h3 className="fsh">
-        Google Sheet aur Drive
+        Google Sheets and Drive
       </h3>
 
       <p
@@ -579,29 +576,27 @@ function GoogleSection({
           className="dot"
           aria-hidden="true"
         />
-        {google.enabled ? 'Chalu' : 'Band'}
+        {google.enabled ? 'Connected' : 'Not connected'}
       </p>
 
       {!google.enabled ? (
         <p className="hint">
-          Har entry Google Sheet me aur har bill
-          Google Drive me save karne ke liye
-          Vercel me GOOGLE_SCRIPT_URL aur
-          GOOGLE_SCRIPT_SECRET daal ke dobara
-          deploy karo (README dekho).
+          To sync entries to Google Sheets and receipts to Google Drive,
+          configure GOOGLE_SCRIPT_URL and GOOGLE_SCRIPT_SECRET in Vercel,
+          then redeploy (see the README).
         </p>
       ) : (
         <>
           <p className="hint" id="s-gState">
             {s.running
-              ? 'Abhi bhej raha hai…'
+              ? 'Syncing…'
               : s.pending
                 ? s.pending +
-                  ' badlav Sheet me bhejne baaki'
-                : 'Sab Sheet me pahunch gaya'}
+                  ' changes waiting to sync to Sheets'
+                : 'Everything is synced'}
 
             {s.lastOk
-              ? ' · aakhri baar ' + timeText(s.lastOk)
+              ? ' · last synced ' + timeText(s.lastOk)
               : ''}
           </p>
 
@@ -621,7 +616,7 @@ function GoogleSection({
                   rel="noopener noreferrer"
                 >
                   <Icon name="sheet" />
-                  Sheet kholo
+                  Open sheet
                 </a>
               )}
 
@@ -633,7 +628,7 @@ function GoogleSection({
                   rel="noopener noreferrer"
                 >
                   <Icon name="cloud" />
-                  Bill folder kholo
+                  Open receipt folder
                 </a>
               )}
             </div>
@@ -647,7 +642,7 @@ function GoogleSection({
               onClick={resync}
               disabled={busy}
             >
-              Saari entries Sheet me dobara bhejo
+              Sync all entries again
             </button>
           </div>
 
@@ -660,9 +655,8 @@ function GoogleSection({
           </p>
 
           <p className="hint">
-            Sheet sirf copy hai: Sheet me kuch
-            badloge to app me nahi aayega.
-            Badlav app me hi karo.
+            The sheet is a copy. Changes made in the sheet
+            will not appear in the app. Make changes in the app.
           </p>
         </>
       )}
@@ -673,17 +667,16 @@ function GoogleSection({
 function aiText(ai: AiStatus): string {
   if (!ai.enabled) {
     return (
-      'AI band hai. Vercel ke Environment Variables ' +
-      'me AI_API_KEY daal ke dobara deploy karo ' +
-      '(README dekho).'
+      'AI is not configured. Add AI_API_KEY to Vercel Environment Variables ' +
+      'and redeploy ' +
+      '(see the README).'
     );
   }
 
   return (
-    'AI chalu hai (' +
+    'AI is enabled (' +
     (ai.provider === 'claude' ? 'Claude' : 'Gemini') +
-    '). Bill lagate hi bill no. aur details ' +
-    'khud bhar jayengi.'
+    '). Upload a receipt to automatically fill in its number and details.'
   );
 }
 
@@ -780,8 +773,7 @@ function ThemeSection() {
       </h3>
 
       <p className="hint">
-        Dark / Light mode aur apna pasandida
-        rang chuno.
+        Choose dark or light mode and your preferred color.
       </p>
 
       <span className="flabel">
@@ -845,8 +837,8 @@ function ThemeSection() {
       </div>
 
       <p className="hint">
-        Theme is browser me save rahegi.
-        Data aur PDF par koi asar nahi padega.
+        Your theme is saved in this browser.
+        It does not affect your data or PDFs.
       </p>
     </section>
   );
@@ -879,7 +871,7 @@ export function SettingsSections() {
         live &&
         setMsg({
           cls: 'badmsg',
-          text: 'Team list nahi khuli.',
+          text: 'Could not load the team list.',
         })
     );
 
@@ -903,7 +895,7 @@ export function SettingsSections() {
     if (bad) {
       return setMsg({
         cls: 'badmsg',
-        text: 'Ye email sahi nahi lag raha: ' + bad,
+        text: 'This email address appears to be invalid: ' + bad,
       });
     }
 
@@ -919,17 +911,17 @@ export function SettingsSections() {
       setMsg({
         cls: 'okmsg',
         text:
-          'Team save ho gayi (' +
+          'Team saved (' +
           list.length +
-          ' log).',
+          ' members).',
       });
     } catch (e) {
       setMsg({
         cls: 'badmsg',
         text:
           errCode(e) === 'permission-denied'
-            ? 'Sirf register ka owner team badal sakta hai.'
-            : 'Save nahi hua. Internet check karo.',
+            ? 'Only the register owner can update the team.'
+            : 'Could not save. Check your internet connection.',
       });
     } finally {
       setBusy(false);
@@ -945,7 +937,7 @@ export function SettingsSections() {
     >
       <section className="setsec card">
         <h3 className="fsh">
-          Aapka account
+          Your account
         </h3>
 
         <div className="me">
@@ -975,22 +967,21 @@ export function SettingsSections() {
 
       <section className="setsec card">
         <h3 className="fsh">
-          Team: kaun-kaun register khol sakta hai
+          Team access
         </h3>
 
         <p className="hint">
-          Har line me ek Gmail likho.
-          Inke alawa sirf owner
-          (jiska email Firebase rules me hai)
-          andar aa sakta hai.
-          Team sirf owner badal sakta hai.
+          Enter one Google account email per line.
+          Only these team members and the owner
+          (configured in Firebase rules) can access the register.
+          Only the owner can update the team.
         </p>
 
         <textarea
           id="s-team"
           rows={4}
           placeholder={
-            'banda1@gmail.com\nbanda2@gmail.com'
+            'person1@gmail.com\nperson2@gmail.com'
           }
           autoComplete="off"
           value={team}
@@ -1006,7 +997,7 @@ export function SettingsSections() {
             onClick={() => saveTeamList(me)}
             disabled={busy}
           >
-            Team save karo
+            Save team
           </button>
 
           <span
@@ -1021,7 +1012,7 @@ export function SettingsSections() {
 
       <section className="setsec card">
         <h3 className="fsh">
-          AI se bill padhna
+          Read receipts with AI
         </h3>
 
         <p
@@ -1035,7 +1026,7 @@ export function SettingsSections() {
             className="dot"
             aria-hidden="true"
           />
-          {ai.enabled ? 'Chalu' : 'Band'}
+          {ai.enabled ? 'Enabled' : 'Disabled'}
         </p>
 
         <p className="hint">
@@ -1043,8 +1034,8 @@ export function SettingsSections() {
         </p>
 
         <p className="hint">
-          AI ki key server pe rehti hai,
-          kisi phone ya browser me nahi jaati.
+          The AI key stays on the server and is never sent
+          to a phone or browser.
         </p>
       </section>
 
@@ -1074,7 +1065,7 @@ export function Lightbox({
       open={!!bill}
       onClose={onClose}
       className="lightbox"
-      label="Bill ki photo"
+      label="Receipt photo"
       clickClose
     >
       {bill && (
@@ -1082,7 +1073,7 @@ export function Lightbox({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={bill.url}
-            alt={bill.name || 'Bill'}
+            alt={bill.name || 'Receipt'}
           />
 
           <p>{bill.name}</p>

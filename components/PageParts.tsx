@@ -6,7 +6,7 @@ import type { Filters, Tab } from '@/lib/types';
 import { Icon } from './Icon';
 import { useReg } from './context';
 
-/* ---------- har page ka sir: naam, Excel, Print, Naya saman ---------- */
+/* ---------- Shared page heading, export, print, and add actions ---------- */
 export function PageHead({
   title,
   sub,
@@ -37,13 +37,13 @@ export function PageHead({
       <div className="phead-a">
         {children}
         {csv && items.length > 0 && (
-          <button className="btn" type="button" id="csvBtn" onClick={() => exportCsv(csv)} title="Ye list CSV file me nikalo (Excel me khulegi)">
+          <button className="btn" type="button" id="csvBtn" onClick={() => exportCsv(csv)} title="Export this list as a CSV file">
             <Icon name="dl" />
             <span className="bl">Excel</span>
           </button>
         )}
         {print && (
-          <button className="btn" type="button" id="printBtn" onClick={printPage} title="Ye page print karo ya PDF banao">
+          <button className="btn" type="button" id="printBtn" onClick={printPage} title="Print this page or save it as a PDF">
             <Icon name="print" />
             <span className="bl">Print</span>
           </button>
@@ -51,14 +51,14 @@ export function PageHead({
         {add && (
           <button className="btn primary" type="button" id="newBtn" onClick={newEntry}>
             <Icon name="plus" />
-            Naya saman
+            Add item
           </button>
         )}
       </div>
       {print && (
         <div className="print-head" aria-hidden="true">
           <div className="ph-brand">
-            <b>Office Saman Register</b>
+            <b>Office Supplies Register</b>
             <span>{title}</span>
           </div>
           <div className="ph-meta">
@@ -80,14 +80,14 @@ export function EmptyState({ onNew }: { onNew: () => void }) {
       <div className="art">
         <Icon name="box" />
       </div>
-      <h2>Register abhi khaali hai</h2>
+      <h2>Your register is empty</h2>
       <p>
-        Office ke liye jo bhi mangao, hard disk, SDI ya HDMI cable, computer ka saman, uski entry yahan karo. Bill ki photo lagao to AI form khud
-        bhar dega. Kab mangaya, kab aaya, kisne laya, kitne ka aaya, aapke paise aur kisko diya, sab ek jagah rahega.
+        Track office purchases such as hard drives, SDI or HDMI cables, and computer supplies. Add a receipt photo and AI can fill in the form.
+        Keep order and delivery dates, supplier, cost, reimbursements, and issued items together in one place.
       </p>
       <button className="btn primary" type="button" onClick={onNew}>
         <Icon name="plus" />
-        Pehli entry jodo
+        Add your first entry
       </button>
     </div>
   );
@@ -99,9 +99,9 @@ export function NoRes({ msg, onClear }: { msg?: string; onClear: () => void }) {
       <span className="nores-ic">
         <Icon name="search" />
       </span>
-      <p>{msg || 'Is filter me kuch nahi mila.'}</p>
+      <p>{msg || 'No results found for these filters.'}</p>
       <button className="btn sm" type="button" onClick={onClear}>
-        Filter hatao
+        Clear filters
       </button>
     </div>
   );
@@ -165,7 +165,7 @@ export function FiltersBar({ tab }: { tab: Tab }) {
       {show('q') && (
         <div className="search">
           <Icon name="search" />
-          <input id="q" type="search" placeholder="Dhundo: saman, dukaan, banda, serial no.…" aria-label="Dhundo" autoComplete="off" value={f.q} onChange={upd('q')} />
+          <input id="q" type="search" placeholder="Search items, suppliers, people, serial numbers…" aria-label="Search" autoComplete="off" value={f.q} onChange={upd('q')} />
         </div>
       )}
       {toggle && (
@@ -176,29 +176,29 @@ export function FiltersBar({ tab }: { tab: Tab }) {
         </button>
       )}
       {show('month') && (
-        <Select id="fMonth" label="Mahina" value={f.month} onChange={upd('month')} placeholder="Har mahina" options={months.map((m) => ({ value: m, label: mlabel(m) }))} />
+        <Select id="fMonth" label="Month" value={f.month} onChange={upd('month')} placeholder="All months" options={months.map((m) => ({ value: m, label: mlabel(m) }))} />
       )}
       {show('vendor') && (
-        <Select id="fVendor" label="Kahan se mangaya" value={f.vendor} onChange={upd('vendor')} placeholder="Har dukaan / site" options={vendors.map((v) => ({ value: v, label: v }))} />
+        <Select id="fVendor" label="Supplier" value={f.vendor} onChange={upd('vendor')} placeholder="All suppliers / sites" options={vendors.map((v) => ({ value: v, label: v }))} />
       )}
-      {show('status') && <Select id="fStatus" label="Status" value={f.status} onChange={upd('status')} placeholder="Har status" options={asOpts(STATUS_LABEL)} />}
-      {show('pay') && <Select id="fPay" label="Mera paisa" value={f.pay} onChange={upd('pay')} placeholder="Mera paisa: sab" options={asOpts(PAY_LABEL)} />}
-      {show('stock') && <Select id="fStock" label="Stock" value={f.stock} onChange={upd('stock')} placeholder="Saara saman" options={asOpts(STOCK_LABEL)} />}
+      {show('status') && <Select id="fStatus" label="Status" value={f.status} onChange={upd('status')} placeholder="All statuses" options={asOpts(STATUS_LABEL)} />}
+      {show('pay') && <Select id="fPay" label="Reimbursement" value={f.pay} onChange={upd('pay')} placeholder="All reimbursement statuses" options={asOpts(PAY_LABEL)} />}
+      {show('stock') && <Select id="fStock" label="Stock" value={f.stock} onChange={upd('stock')} placeholder="All stock" options={asOpts(STOCK_LABEL)} />}
       {show('dept') && (
-        <Select id="fDept" label="Department" value={f.dept} onChange={upd('dept')} placeholder="Har department" options={depts.map((d) => ({ value: d, label: d }))} />
+        <Select id="fDept" label="Department" value={f.dept} onChange={upd('dept')} placeholder="All departments" options={depts.map((d) => ({ value: d, label: d }))} />
       )}
       {show('sort') && (
-        <select id="fSort" aria-label="Kram" value={f.sort} onChange={upd('sort')}>
-          <option value="new">Naya pehle</option>
-          <option value="old">Purana pehle</option>
-          <option value="costly">Mehenga pehle</option>
-          <option value="name">Naam (A-Z)</option>
+        <select id="fSort" aria-label="Sort order" value={f.sort} onChange={upd('sort')}>
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="costly">Highest cost first</option>
+          <option value="name">Name (A–Z)</option>
         </select>
       )}
       {filtersActive(f, tab) && (
         <button className="btn sm clearf" type="button" onClick={() => setF((p) => ({ ...p, q: '', month: '', vendor: '', status: '', pay: '', stock: '', dept: '' }))}>
           <Icon name="x" />
-          Filter hatao
+          Clear filters
         </button>
       )}
     </div>

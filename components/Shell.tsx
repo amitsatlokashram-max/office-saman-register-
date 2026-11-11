@@ -129,7 +129,7 @@ export const PAGES: {
   },
   {
     href: '/saman',
-    label: 'Saman',
+    label: 'Items',
     icon: 'list',
     id: 'nav-saman',
     count: 'items',
@@ -143,7 +143,7 @@ export const PAGES: {
   },
   {
     href: '/kisko-diya',
-    label: 'Kisko diya',
+    label: 'Issued items',
     icon: 'users',
     id: 'nav-kisko-diya',
     count: 'issues',
@@ -156,7 +156,7 @@ export const PAGES: {
   },
   {
     href: '/hisaab',
-    label: 'Hisaab',
+    label: 'Reports',
     icon: 'chart',
     id: 'nav-hisaab',
   },
@@ -267,8 +267,7 @@ export default function Shell({
       late: (e) => toast(explain(e)),
       queued: () =>
         toast(
-          'Net nahi hai. Entry is phone me save hai, ' +
-          'net aate hi upload ho jayegi.'
+          'You are offline. This entry is saved on this device and will sync when you reconnect.'
         ),
     });
   }, [toast]);
@@ -308,8 +307,8 @@ export default function Shell({
         } else {
           setPhase('ready');
           setNoticeMsg(
-            'Register live update nahi ho raha. ' +
-            'Internet check karke page reload karo.'
+            'The register is not updating. ' +
+            'Check your internet connection and reload the page.'
           );
         }
       }
@@ -449,10 +448,8 @@ export default function Shell({
         () =>
           toast(
             n > 0
-              ? 'Kam se kam stock ' +
-                n +
-                ' set ho gaya'
-              : 'Kam se kam stock hata diya'
+              ? 'Minimum stock set to ' + n
+              : 'Minimum stock level removed'
           ),
         (e) => toast(explain(e))
       );
@@ -507,7 +504,7 @@ export default function Shell({
       );
 
       toast(
-        'File download ho gayi, Excel me khol lo'
+        'File downloaded. Open it in Excel.'
       );
     },
     [groups, f, toast]
@@ -662,13 +659,13 @@ export default function Shell({
           <aside
             className="side"
             id="sideMenu"
-            aria-label="Register ka menu"
+            aria-label="Register menu"
           >
             <div className="side-head">
               <Link
                 href="/"
                 className="brand"
-                aria-label="Office Saman Register: Dashboard"
+                aria-label="Office Supplies Register: Dashboard"
               >
                 <span
                   className="logo"
@@ -678,7 +675,7 @@ export default function Shell({
                 </span>
 
                 <span className="brand-t">
-                  Office Saman
+                  Office Supplies
                   <br />
                   Register
                 </span>
@@ -692,7 +689,7 @@ export default function Shell({
                 onClick={() =>
                   setMenuOpen(false)
                 }
-                aria-label="Menu band karo"
+                aria-label="Close menu"
               >
                 <Icon name="x" />
               </button>
@@ -700,7 +697,7 @@ export default function Shell({
 
             <nav
               className="nav"
-              aria-label="Register ke page"
+              aria-label="Register pages"
             >
               {PAGES.map((p) => (
                 <Link
@@ -740,7 +737,7 @@ export default function Shell({
                 type="button"
                 id="logoutBtn"
                 onClick={signOutNow}
-                title="Logout: register band karo"
+                title="Sign out"
               >
                 <Icon name="logout" />
 
@@ -799,7 +796,7 @@ export default function Shell({
                 </span>
 
                 <span className="brand-t">
-                  Office Saman Register
+                  Office Supplies Register
                 </span>
               </Link>
 

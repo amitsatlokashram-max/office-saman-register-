@@ -50,7 +50,7 @@ function initVals(it?: Item): Vals {
   };
 }
 
-/** Piece, rate aur total aapas me jude hai: rate badlo to total, total badlo to rate. */
+/** Quantity, rate, and total are linked: changing either value recalculates the other. */
 function couple(p: Vals, changed: 'qty' | 'rate' | 'total'): Vals {
   const q = Math.round(num(p.qty));
   if (q <= 0) return p;
@@ -110,7 +110,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
       r.closed = true;
       r.aiCtl?.abort();
       r.aiCtl = null;
-      if (!r.saved) r.uploaded.forEach(delBill); // save nahi kiya to naye lagaye bill hata do
+      if (!r.saved) r.uploaded.forEach(delBill);
     };
   }, []);
 
@@ -180,7 +180,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
     setAiLines([]);
     setAiView({
       kind: 'busy',
-      node: (auto ? 'Bill padh ke bill no. aur baaki details bhar raha hai…' : 'AI bill padh raha hai…') + ' 10 se 40 second lag sakte hai.',
+      node: (auto ? 'Reading the receipt and filling in its number and details…' : 'AI is reading the receipt…') + ' This may take 10–40 seconds.',
     });
     try {
       const res = await readBillWithAi(b, R.current.blobs[b.id], ctl.signal);
@@ -233,21 +233,21 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
     setAiLines(lines);
     const head = bn ? (
       <>
-        Bill no. <b>{bn}</b> bhar diya.
+        Receipt number <b>{bn}</b> filled in.
       </>
     ) : (
-      <>Bill me bill no. nahi mila, khud likh do.</>
+      <>No receipt number found. Enter it manually.</>
     );
-    if (!lines.length) setAiView({ kind: 'msg', node: <>{head} Saman ki line saaf nahi mili, saman khud likh do.</> });
-    else if (itemTyped) setAiView({ kind: 'ok', node: <>{head} Aapka likha saman waisa hi rakha hai.</> });
-    else if (lines.length === 1) setAiView({ kind: 'ok', node: <>{head} Saman, rate aur total bhi bhar diya. Ek baar check karke Save karo.</> });
-    else setAiView({ kind: 'pick', node: <>{head} Bill me {lines.length} saman mile. Ek chuno is entry ke liye, ya sab ki alag-alag entry ek saath bana do.</> });
+    if (!lines.length) setAiView({ kind: 'msg', node: <>{head} No clear item line found. Enter the item details manually.</> });
+    else if (itemTyped) setAiView({ kind: 'ok', node: <>{head} Your existing item details were kept.</> });
+    else if (lines.length === 1) setAiView({ kind: 'ok', node: <>{head} Item, rate, and total filled in. Review and save.</> });
+    else setAiView({ kind: 'pick', node: <>{head} Found {lines.length} items. Choose one for this entry or create separate entries for all.</> });
   }
 
   function pickLine(l: AiLine) {
     setV((p) => ({ ...p, ...lineVals(l) }));
     setFlash((p) => ({ ...p, item: true, qty: true, rate: true, total: true, ...(l.category ? { category: true } : {}) }));
-    setAiView({ kind: 'ok', node: 'Ye saman form me bhar diya. Check karke Save karo.' });
+    setAiView({ kind: 'ok', node: 'Item details filled in. Review and save.' });
   }
 
   /* ---------- save ---------- */
@@ -272,17 +272,17 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
     setFormErr('');
     setIssErr(null);
     if (uploading) {
-      setFormErr('Bill upload ho raha hai, thoda ruko.');
+      setFormErr('A receipt is uploading. Please wait.');
       return;
     }
     const item = v.item.trim();
     const qty = Math.round(num(v.qty));
     if (!item) {
-      setErrs({ item: 'Saman ka naam likho' });
+      setErrs({ item: 'Enter an item name.' });
       return focus('f-item');
     }
     if (qty < 1) {
-      setErrs({ qty: 'Kam se kam 1 piece' });
+      setErrs({ qty: 'Quantity must be at least 1.' });
       return focus('f-qty');
     }
     let rate = round2(num(v.rate));
@@ -291,11 +291,11 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
     if (!rate && total) rate = round2(total / qty);
     const existing = editId ? getItem(editId) : undefined;
     if (editId && !existing) {
-      setFormErr('Ye entry ab register me nahi hai.');
+      setFormErr('This entry is no longer in the register.');
       return;
     }
     if (existing && remaining({ ...existing, qty }) < 0) {
-      setErrs({ qty: 'Itne piece pehle hi de chuke ho ya kharab likhe hai, isse kam nahi ho sakta' });
+      setErrs({ qty: 'Quantity cannot be lower than the amount already issued or marked damaged.' });
       return focus('f-qty');
     }
     const arrivalMeta = common(v);
@@ -304,7 +304,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
       const paid = round2(num(v.myPaid)) || total;
       const back = round2(num(v.myBack));
       if (back > paid) {
-        setFormErr('Wapas mile paise, diye hue paison se zyada nahi ho sakte.');
+        setFormErr('The reimbursed amount cannot exceed the amount paid.');
         return focus('f-myBack');
       }
       my = { iPaid: true, myPaid: paid, myBack: back, myBackDate: back > 0 ? v.myBackDate : '' };
@@ -342,7 +342,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
       await save(doc);
       R.current.saved = true;
       R.current.removed.forEach((b) => dropBill(b, items, doc.id));
-      toast(existing ? 'Entry update ho gayi' : 'Entry jud gayi · ' + inr(total) + ' total me jud gaya');
+      toast(existing ? '✓ Expense updated' : '✓ Expense saved · ' + inr(total));
       onDone();
     } catch (err) {
       setSaving(false);
@@ -353,7 +353,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
   async function saveAllLines() {
     if (aiLines.length < 2) return;
     setSaving(true);
-    setAiView({ kind: 'busy', node: aiLines.length + ' entries save ho rahi hai…' });
+    setAiView({ kind: 'busy', node: 'Saving ' + aiLines.length + ' entries…' });
     const c = common(v);
     const paidRaw = num(v.myPaid);
     const allBack = paidRaw > 0 && num(v.myBack) >= paidRaw;
@@ -387,10 +387,10 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
     }
     if (err) {
       setSaving(false);
-      setAiView({ kind: 'msg', node: done + ' entries save hui. Baaki save nahi hui: ' + explain(err) });
+      setAiView({ kind: 'msg', node: done + ' entries saved. The remaining entries could not be saved: ' + explain(err) });
       return;
     }
-    toast(done + ' entries jud gayi · ' + inr(aiLines.reduce((s, l) => s + l.total, 0)) + ' total me jud gaya');
+    toast('✓ Expenses saved · ' + inr(aiLines.reduce((s, l) => s + l.total, 0)));
     onDone();
   }
 
@@ -406,21 +406,21 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
     const t = formTotal(v);
     const p = num(v.myPaid);
     const b = num(v.myBack);
-    if (!p) myBal = { cls: 'mybal', text: 'Maine kitne diye, wo likho' + (t ? ' (is saman ka total ' + inr(t) + ')' : '') };
+    if (!p) myBal = { cls: 'mybal', text: 'Enter the amount you paid' + (t ? ' (item total: ' + inr(t) + ')' : '') };
     else {
       const d = round2(p - b);
-      if (d > 0) myBal = { cls: 'mybal due', text: 'Abhi ' + inr(d) + ' wapas milne baaki' };
-      else if (d < 0) myBal = { cls: 'mybal due', text: 'Wapas mile, diye se zyada nahi ho sakte' };
-      else myBal = { cls: 'mybal ok', text: 'Saare ' + inr(p) + ' wapas mil gaye' };
+      if (d > 0) myBal = { cls: 'mybal due', text: inr(d) + ' reimbursement outstanding' };
+      else if (d < 0) myBal = { cls: 'mybal due', text: 'Reimbursed amount cannot exceed the amount paid.' };
+      else myBal = { cls: 'mybal ok', text: 'Fully reimbursed: ' + inr(p) };
     }
   }
 
   const aiOK = ai.enabled && bills.length > 0;
   const billHint = aiOK
-    ? 'Bill lagate hi AI bill no., saman, rate, total, tareekh aur dukaan khud bhar deta hai. Kuch chhoot jaye to button dabake dobara padhwa lo.'
+    ? 'AI can read the receipt number, items, rates, total, date, and supplier. If anything is missed, run the scan again.'
     : ai.enabled
-      ? 'Bill ki photo ya PDF lagao. Lagate hi AI bill no., saman, rate, total aur tareekh khud bhar dega.'
-      : 'Phone se bill ki photo khinch ke bhi laga sakte ho.';
+      ? 'Upload a receipt photo or PDF and AI will fill in the receipt number, items, rates, total, and date.'
+      : 'You can also take a photo of the receipt with your phone.';
 
   const setWarranty = (y: number) => {
     let base = v.receivedDate || v.orderDate || today();
@@ -431,15 +431,15 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
   return (
     <form id="itemForm" noValidate onSubmit={onSubmit}>
       <div className="mhead">
-        <h2 id="formTitle">{editId ? 'Entry badlo' : 'Naya saman jodo'}</h2>
-        <button type="button" className="iconbtn" onClick={onDone} aria-label="Band karo">
+        <h2 id="formTitle">{editId ? 'Edit entry' : 'Add item'}</h2>
+        <button type="button" className="iconbtn" onClick={onDone} aria-label="Close">
           <Icon name="x" />
         </button>
       </div>
 
       <div className="mbody">
         <div className="fsec">
-          <h3 className="fsh">Bill (pehle lagao, AI form bhar dega)</h3>
+          <h3 className="fsh">Receipt (upload first to let AI fill in the form)</h3>
           <div className="upl">
             {(bills.length > 0 || uploading > 0) && (
               <div className="upl-list" id="f-billList">
@@ -449,7 +449,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
                     <span className="nm" title={b.name}>
                       {b.name}
                     </span>
-                    <button type="button" className="iconbtn sm" onClick={() => removeBill(b.id)} aria-label="Ye bill hatao">
+                    <button type="button" className="iconbtn sm" onClick={() => removeBill(b.id)} aria-label="Remove receipt">
                       <Icon name="x" />
                     </button>
                   </div>
@@ -459,7 +459,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
                     <span className="tn">
                       <span className="spin" />
                     </span>
-                    <span className="nm">Upload ho raha hai…</span>
+                    <span className="nm">Uploading…</span>
                   </div>
                 )}
               </div>
@@ -467,12 +467,12 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
             <div className="upl-btns">
               <label className="btn sm" htmlFor="f-file" id="f-fileBtn">
                 <Icon name="clip" />
-                Bill lagao (photo ya PDF)
+                Upload receipt (photo or PDF)
               </label>
               {aiOK && (
                 <button type="button" className="btn sm ai" id="f-ai" onClick={() => runAi(false)} disabled={aiBusy}>
                   <Icon name="spark" />
-                  {aiRan ? 'Bill dobara padho (AI)' : 'Bill se form bharo (AI)'}
+                  {aiRan ? 'Scan receipt again (AI)' : 'Fill form from receipt (AI)'}
                 </button>
               )}
             </div>
@@ -497,7 +497,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
                   <span>{aiView.node}</span>
                   {aiView.kind === 'busy' && aiBusy && (
                     <button type="button" className="btn sm" onClick={() => R.current.aiCtl?.abort()}>
-                      Rok do
+                      Cancel
                     </button>
                   )}
                 </div>
@@ -515,7 +515,7 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
                     </div>
                     <div>
                       <button type="button" className="btn sm primary" onClick={saveAllLines} disabled={saving}>
-                        Sab {aiLines.length} saman ki alag entry bana do
+                        Create separate entries for all {aiLines.length} items
                       </button>
                     </div>
                   </>
@@ -526,34 +526,34 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
         </div>
 
         <div className="fsec">
-          <h3 className="fsh">Saman</h3>
+          <h3 className="fsh">Item details</h3>
           <div className="fgrid">
             <div className="field span2">
-              <label htmlFor="f-item">Saman ka naam *</label>
-              <input id="f-item" list="dl-item" placeholder="Jaise: Hard Disk 2TB Seagate" autoComplete="off" className={cls('item')} value={v.item} onChange={(e) => set('item', e.target.value)} />
+              <label htmlFor="f-item">Item name *</label>
+              <input id="f-item" list="dl-item" placeholder="For example: Seagate 2TB hard drive" autoComplete="off" className={cls('item')} value={v.item} onChange={(e) => set('item', e.target.value)} />
               {errs.item && <span className="err">{errs.item}</span>}
             </div>
             <div className="field">
-              <label htmlFor="f-category">Kis tarah ka saman</label>
+              <label htmlFor="f-category">Category</label>
               <input id="f-category" list="dl-category" placeholder="Hard Disk, SDI Cable, HDMI Cable…" autoComplete="off" className={cls('category')} value={v.category} onChange={(e) => set('category', e.target.value)} />
             </div>
             <div className="field">
               <label htmlFor="f-billNo">Bill / Order no.</label>
-              <input id="f-billNo" placeholder="Amazon order ID ya bill number" autoComplete="off" className={cls('billNo')} value={v.billNo} onChange={(e) => set('billNo', e.target.value)} />
+              <input id="f-billNo" placeholder="Amazon order ID or receipt number" autoComplete="off" className={cls('billNo')} value={v.billNo} onChange={(e) => set('billNo', e.target.value)} />
             </div>
           </div>
         </div>
 
         <div className="fsec">
-          <h3 className="fsh">Paisa</h3>
+          <h3 className="fsh">Pricing</h3>
           <div className="fgrid g3">
             <div className="field">
-              <label htmlFor="f-qty">Kitne piece *</label>
+              <label htmlFor="f-qty">Quantity *</label>
               <input id="f-qty" type="number" inputMode="numeric" min={1} step={1} className={cls('qty')} value={v.qty} onChange={(e) => setMoney('qty', e.target.value)} />
               {errs.qty && <span className="err">{errs.qty}</span>}
             </div>
             <div className="field">
-              <label htmlFor="f-rate">Rate (1 piece ka)</label>
+              <label htmlFor="f-rate">Rate (per item)</label>
               <div className="money">
                 <span>₹</span>
                 <input id="f-rate" type="number" inputMode="decimal" min={0} step="any" placeholder="0" className={cls('rate')} value={v.rate} onChange={(e) => setMoney('rate', e.target.value)} />
@@ -576,11 +576,11 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
               <strong id="cb-tot">{inr(showTotal)}</strong>
             </div>
           </div>
-          <p className="hint">Rate daalo to total khud judta hai. Sirf total pata ho to total daalo, 1 piece ka rate khud nikal aayega.</p>
+          <p className="hint">Enter the rate to calculate the total, or enter the total to calculate the per-item rate.</p>
         </div>
 
         <div className="fsec">
-          <h3 className="fsh">Mera paisa</h3>
+          <h3 className="fsh">Reimbursement</h3>
           <label className="check" htmlFor="f-iPaid">
             <input
               type="checkbox"
@@ -591,26 +591,26 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
                 setV((p) => ({ ...p, iPaid: on, myPaid: on && !p.myPaid && formTotal(p) ? String(formTotal(p)) : p.myPaid }));
               }}
             />{' '}
-            Maine apni jeb se paise diye
+            I paid for this personally
           </label>
-          <p className="hint">Tick nahi kiya to maana jayega ki dukaan ya laane wale ne paise khud le liye.</p>
+          <p className="hint">If unchecked, the supplier or person who brought the item is assumed to have paid.</p>
           {v.iPaid && (
             <div className="myfields">
               <div className="fgrid g3">
                 <div className="field">
-                  <label htmlFor="f-myPaid">Maine kitne diye</label>
+                  <label htmlFor="f-myPaid">Amount paid</label>
                   <div className="money">
                     <span>₹</span>
                     <input id="f-myPaid" type="number" inputMode="decimal" min={0} step="any" placeholder="0" value={v.myPaid} onChange={(e) => set('myPaid', e.target.value)} />
                   </div>
                   <div className="linkrow">
                     <button type="button" className="link" onClick={() => formTotal(v) && set('myPaid', String(formTotal(v)))}>
-                      Pura total daalo
+                      Use full total
                     </button>
                   </div>
                 </div>
                 <div className="field">
-                  <label htmlFor="f-myBack">Wapas kitne mile</label>
+                  <label htmlFor="f-myBack">Amount reimbursed</label>
                   <div className="money">
                     <span>₹</span>
                     <input id="f-myBack" type="number" inputMode="decimal" min={0} step="any" placeholder="0" value={v.myBack} onChange={(e) => set('myBack', e.target.value)} />
@@ -624,15 +624,15 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
                         if (pp) setV((p) => ({ ...p, myPaid: String(pp), myBack: String(pp), myBackDate: p.myBackDate || today() }));
                       }}
                     >
-                      Sab mil gaye
+                      Fully reimbursed
                     </button>
                     <button type="button" className="link" onClick={() => setV((p) => ({ ...p, myBack: '', myBackDate: '' }))}>
-                      Abhi kuch nahi
+                      Not reimbursed yet
                     </button>
                   </div>
                 </div>
                 <div className="field">
-                  <label htmlFor="f-myBackDate">Kab mile</label>
+                  <label htmlFor="f-myBackDate">Reimbursement date</label>
                   <input id="f-myBackDate" type="date" value={v.myBackDate} onChange={(e) => set('myBackDate', e.target.value)} />
                 </div>
               </div>
@@ -644,71 +644,71 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
         </div>
 
         <div className="fsec">
-          <h3 className="fsh">आवक की जानकारी</h3>
+          <h3 className="fsh">Delivery details</h3>
           <div className="fgrid">
             <div className="field">
-              <label htmlFor="f-arrivalNo">आवक नंबर</label>
+              <label htmlFor="f-arrivalNo">Delivery number</label>
               <input id="f-arrivalNo" value={v.arrivalNo || 'AWK-0001'} onChange={(e) => set('arrivalNo', e.target.value)} placeholder="AWK-0001" />
             </div>
             <div className="field">
-              <label htmlFor="f-arrivalTime">आवक का समय</label>
+              <label htmlFor="f-arrivalTime">Delivery time</label>
               <input id="f-arrivalTime" type="time" value={v.arrivalTime} onChange={(e) => set('arrivalTime', e.target.value)} />
             </div>
             <div className="field">
-              <label htmlFor="f-arrivalMode">आवक का प्रकार</label>
+              <label htmlFor="f-arrivalMode">Delivery type</label>
               <select id="f-arrivalMode" value={v.arrivalMode} onChange={(e) => set('arrivalMode', e.target.value as 'demand' | 'direct' | 'unknown')}>
-                <option value="unknown">अस्पष्ट</option>
-                <option value="demand">डिमांड से आया</option>
-                <option value="direct">सीधी खरीद</option>
+                <option value="unknown">Unknown</option>
+                <option value="demand">From a request</option>
+                <option value="direct">Direct purchase</option>
               </select>
             </div>
             <div className="field">
-              <label htmlFor="f-receivedBy">किसने प्राप्त किया</label>
+              <label htmlFor="f-receivedBy">Received by</label>
               <input id="f-receivedBy" placeholder="Amit, Office team…" autoComplete="off" value={v.receivedBy} onChange={(e) => set('receivedBy', e.target.value)} />
             </div>
             <div className="field">
-              <label htmlFor="f-orderDate">Kab mangaya</label>
+              <label htmlFor="f-orderDate">Order date</label>
               <input id="f-orderDate" type="date" className={cls('orderDate')} value={v.orderDate} onChange={(e) => set('orderDate', e.target.value)} />
             </div>
             <div className="field">
-              <label htmlFor="f-receivedDate">Kab pahuncha</label>
+              <label htmlFor="f-receivedDate">Received date</label>
               <div className="inrow">
                 <input id="f-receivedDate" type="date" value={v.receivedDate} onChange={(e) => set('receivedDate', e.target.value)} />
                 <button type="button" className="btn sm" onClick={() => set('receivedDate', today())}>
-                  Aaj
+                  Today
                 </button>
               </div>
-              <span className="hint">Abhi nahi aaya to khaali chhodo</span>
+              <span className="hint">Leave blank if it has not arrived yet.</span>
             </div>
             <div className="field">
-              <label htmlFor="f-vendor">Kahan se mangaya</label>
+              <label htmlFor="f-vendor">Supplier</label>
               <input id="f-vendor" list="dl-vendor" placeholder="Amazon, Nehru Place…" autoComplete="off" className={cls('vendor')} value={v.vendor} onChange={(e) => set('vendor', e.target.value)} />
             </div>
             <div className="field">
-              <label htmlFor="f-broughtBy">Kisne laya</label>
+              <label htmlFor="f-broughtBy">Brought by</label>
               <input id="f-broughtBy" list="dl-brought" placeholder="Kapil Das, courier…" autoComplete="off" value={v.broughtBy} onChange={(e) => set('broughtBy', e.target.value)} />
             </div>
           </div>
         </div>
 
         <div className="fsec">
-          <h3 className="fsh">Serial no. aur warranty</h3>
+          <h3 className="fsh">Serial numbers and warranty</h3>
           <div className="fgrid">
             <div className="field">
-              <label htmlFor="f-serials">Serial no. (har piece ka, alag line me)</label>
+              <label htmlFor="f-serials">Serial numbers (one per line)</label>
               <textarea id="f-serials" rows={2} placeholder="Jaise: WX12A3456789" autoComplete="off" value={v.serials} onChange={(e) => set('serials', e.target.value)} />
             </div>
             <div className="field">
-              <label htmlFor="f-warrantyTill">Warranty kab tak</label>
+              <label htmlFor="f-warrantyTill">Warranty expiration date</label>
               <input id="f-warrantyTill" type="date" value={v.warrantyTill} onChange={(e) => set('warrantyTill', e.target.value)} />
               <div className="inrow">
                 {[1, 2, 3].map((y) => (
                   <button key={y} type="button" className="btn sm" onClick={() => setWarranty(y)}>
-                    +{y} saal
+                    +{y} year{y > 1 ? 's' : ''}
                   </button>
                 ))}
               </div>
-              <span className="hint">Pahunchne ki tareekh se ginta hai. 30 din pehle yaad dilayega.</span>
+              <span className="hint">Calculated from the received date. A reminder appears 30 days before expiration.</span>
             </div>
           </div>
         </div>
@@ -726,16 +726,16 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
                   if (on && !issRows.length) setIssRows([newRow(String(Math.max(1, Math.round(num(v.qty)))))]);
                 }}
               />{' '}
-              Aate hi kisi ko de diya? Yahin likh do
+              Issued to someone on arrival? Record it here.
             </label>
             {v.issOn && (
               <>
-                <p className="hint">Alag-alag logo ko diya ho to har bande ki alag line jodo.</p>
+                <p className="hint">Add a separate line for each person or department.</p>
                 <IssueRowsEditor rows={issRows} setRows={setIssRows} max={Math.max(0, Math.round(num(v.qty)))} idPrefix="f-iss" badKey={issErr?.key} />
                 {issErr && <p className="ferr">{issErr.msg}</p>}
                 <div className="fgrid">
                   <div className="field">
-                    <label htmlFor="f-iss-date">Kab diya</label>
+                    <label htmlFor="f-iss-date">Date issued</label>
                     <input id="f-iss-date" type="date" value={v.issDate} onChange={(e) => set('issDate', e.target.value)} />
                   </div>
                 </div>
@@ -746,17 +746,15 @@ function ItemForm({ editId, onDone }: { editId: string | null; onDone: () => voi
 
         <div className="field">
           <label htmlFor="f-note">Note</label>
-          <textarea id="f-note" rows={2} placeholder="Koi bhi yaad rakhne wali baat, jaise kiske kehne pe mangaya…" value={v.note} onChange={(e) => set('note', e.target.value)} />
+          <textarea id="f-note" rows={2} placeholder="Add a note, such as who requested this purchase…" value={v.note} onChange={(e) => set('note', e.target.value)} />
         </div>
         {formErr && <p className="ferr">{formErr}</p>}
       </div>
 
       <div className="mfoot">
-        <button type="button" className="btn" onClick={onDone}>
-          Rehne do
-        </button>
+        <button type="button" className="btn" onClick={onDone}>Cancel</button>
         <button type="submit" className="btn primary" id="f-save" disabled={saving || uploading > 0 || aiBusy}>
-          {saving ? 'Save ho raha…' : 'Save karo'}
+          {saving ? 'Saving…' : 'Save'}
         </button>
       </div>
     </form>

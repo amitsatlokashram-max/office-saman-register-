@@ -3,7 +3,7 @@
 import { MOVE, fdate, inr, issuedQty, moveSum, myPay, num, regNos, remaining, today, warrantyState } from '@/lib/calc';
 import type { Item, Me } from '@/lib/types';
 
-/** Ek entry ki parchi: kagaz pe print karke file me rakhne ya saman dete waqt sign karwane ke liye. */
+/** Printable entry receipt for record keeping and issue signatures. */
 export function EntryPrint({ it, items, me }: { it: Item; items: Item[]; me: Me | null }) {
   const no = String(regNos(items)[it.id] || 0).padStart(3, '0');
   const mp = myPay(it);
@@ -11,22 +11,22 @@ export function EntryPrint({ it, items, me }: { it: Item; items: Item[]; me: Me 
   const issues = it.issues.slice().sort((a, b) => a.date.localeCompare(b.date));
   const moves = it.moves.slice().sort((a, b) => a.date.localeCompare(b.date));
   const rows: [string, string][] = [
-    ['Kab mangaya', fdate(it.orderDate) || '—'],
-    ['Kab pahuncha', it.receivedDate ? fdate(it.receivedDate) : 'Abhi nahi aaya'],
-    ['Kahan se mangaya', it.vendor || '—'],
-    ['Kisne laya', it.broughtBy || '—'],
+    ['Order date', fdate(it.orderDate) || '—'],
+    ['Received date', it.receivedDate ? fdate(it.receivedDate) : 'Not received'],
+    ['Supplier', it.vendor || '—'],
+    ['Brought by', it.broughtBy || '—'],
     ['Bill / Order no.', it.billNo || '—'],
     ['Category', it.category || '—'],
   ];
   if (it.warrantyTill) rows.push(['Warranty', fdate(it.warrantyTill) + (war && war.key !== 'ok' ? ' (' + war.label + ')' : '')]);
-  rows.push(['Bill laga', it.bills.length ? it.bills.length + ' (' + it.bills.map((b) => b.name).join(', ') + ')' : 'Nahi']);
+  rows.push(['Receipt attached', it.bills.length ? it.bills.length + ' (' + it.bills.map((b) => b.name).join(', ') + ')' : 'No']);
 
   return (
-    <article className="slip" aria-label={'Entry #' + no + ' ki parchi'}>
+    <article className="slip" aria-label={'Entry #' + no + ' receipt'}>
       <header className="slip-h">
         <div>
-          <b>Office Saman Register</b>
-          <span>Saman ki parchi</span>
+          <b>Office Supplies Register</b>
+          <span>Item receipt</span>
         </div>
         <div className="slip-no">
           <b>Entry #{no}</b>
@@ -35,7 +35,7 @@ export function EntryPrint({ it, items, me }: { it: Item; items: Item[]; me: Me 
       </header>
 
       <section className="slip-title">
-        <h1>{it.item || '(bina naam)'}</h1>
+        <h1>{it.item || '(Unnamed item)'}</h1>
         <p className="slip-eq">
           <span>
             {num(it.qty)} pcs × {num(it.rate) ? inr(it.rate) : '—'}
@@ -52,11 +52,11 @@ export function EntryPrint({ it, items, me }: { it: Item; items: Item[]; me: Me 
           </div>
         ))}
         <div className="wide">
-          <dt>Mera paisa</dt>
+          <dt>Reimbursement</dt>
           <dd>
             {mp.mine
-              ? 'Maine diye ' + inr(mp.paid) + ', wapas mile ' + inr(mp.back) + (mp.due > 0 ? ', baaki ' + inr(mp.due) : ', sab mil gaye')
-              : 'Maine nahi diye (dukaan ya laane wale ne khud liye)'}
+              ? 'Paid ' + inr(mp.paid) + ', reimbursed ' + inr(mp.back) + (mp.due > 0 ? ', outstanding ' + inr(mp.due) : ', fully reimbursed')
+              : 'Not paid personally (paid by supplier or carrier)'}
           </dd>
         </div>
         {it.serials && (
@@ -74,17 +74,17 @@ export function EntryPrint({ it, items, me }: { it: Item; items: Item[]; me: Me 
       </dl>
 
       <section className="slip-sec">
-        <h2>Kisko diya</h2>
+        <h2>Issued items</h2>
         {issues.length ? (
           <table>
             <thead>
               <tr>
-                <th>Tareekh</th>
-                <th>Kisko diya</th>
+                <th>Date</th>
+                <th>Issued to</th>
                 <th>Department</th>
                 <th className="num">Pcs</th>
                 <th>Note</th>
-                <th className="sigcol">Lene wale ka sign</th>
+                <th className="sigcol">Recipient signature</th>
               </tr>
             </thead>
             <tbody>
@@ -101,18 +101,18 @@ export function EntryPrint({ it, items, me }: { it: Item; items: Item[]; me: Me 
             </tbody>
           </table>
         ) : (
-          <p className="none">Abhi kisi ko nahi diya.</p>
+          <p className="none">Nothing has been issued yet.</p>
         )}
       </section>
 
       {moves.length > 0 && (
         <section className="slip-sec">
-          <h2>Wapas aaya, kharab, return</h2>
+          <h2>Returns and damaged items</h2>
           <table>
             <thead>
               <tr>
-                <th>Tareekh</th>
-                <th>Kya hua</th>
+                <th>Date</th>
+                <th>Action</th>
                 <th className="num">Pcs</th>
                 <th>Note</th>
               </tr>
@@ -132,22 +132,22 @@ export function EntryPrint({ it, items, me }: { it: Item; items: Item[]; me: Me 
       )}
 
       <p className="slip-stock">
-        Aaya {num(it.qty)} · Diya {issuedQty(it)} · Wapas {moveSum(it, 'back')} · Kharab/return {moveSum(it, 'damaged') + moveSum(it, 'vendor')} ·{' '}
-        <b>Bacha {Math.max(remaining(it), 0)}</b>
+        Received {num(it.qty)} · Issued {issuedQty(it)} · Returned {moveSum(it, 'back')} · Damaged/vendor returns {moveSum(it, 'damaged') + moveSum(it, 'vendor')} ·{' '}
+        <b>Remaining {Math.max(remaining(it), 0)}</b>
       </p>
 
       <footer className="slip-sign">
         <div>
           <span className="line" />
-          <span>Dene wale ka sign{me?.name ? ' (' + me.name + ')' : ''}</span>
+          <span>Issued by{me?.name ? ' (' + me.name + ')' : ''}</span>
         </div>
         <div>
           <span className="line" />
-          <span>Lene wale ka sign</span>
+          <span>Received by</span>
         </div>
       </footer>
       <p className="slip-meta">
-        Entry ki: {it.addedByName || '—'}
+        Created by: {it.addedByName || '—'}
         {it.createdAt ? ', ' + fdate(it.createdAt.slice(0, 10)) : ''}
       </p>
     </article>

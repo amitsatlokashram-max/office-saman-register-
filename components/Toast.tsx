@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
-/** Neeche chhota sa message. Popover hai, isliye khule dialog ke upar bhi dikhta hai. */
+/** A brief status message that stays above open dialogs. */
 export function useToast() {
   const ref = useRef<HTMLDivElement>(null);
   const timer = useRef<number | undefined>(undefined);
@@ -17,6 +17,7 @@ export function useToast() {
     const el = ref.current;
     if (!el) return;
     el.textContent = msg;
+    el.classList.toggle('toast-success', msg.startsWith('✓'));
     const canPop = typeof el.showPopover === 'function';
     if (canPop) {
       try {

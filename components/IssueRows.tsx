@@ -4,7 +4,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { num, uid } from '@/lib/calc';
 import { Icon } from './Icon';
 
-/** "Kisko diya" ki ek line: ek banda, uska department, kitne piece. */
+/** One issue row: recipient, department, and quantity. */
 export type IRow = { key: string; person: string; dept: string; qty: string };
 
 export const newRow = (qty = '1', dept = ''): IRow => ({ key: uid(), person: '', dept, qty });
@@ -17,19 +17,19 @@ export type RowsCheck =
   | { ok: true; rows: { person: string; dept: string; qty: number }[]; total: number }
   | { ok: false; msg: string; key?: string };
 
-/** Khaali lines chhod do. Har line me banda ya department, kam se kam 1 piece, aur kul piece max se zyada nahi. */
+/** Ignore empty rows; require a recipient or department and keep total quantity within stock. */
 export function checkRows(rows: IRow[], max: number): RowsCheck {
   const list = used(rows);
-  if (!list.length) return { ok: false, msg: 'Kisko diya ya department, kam se kam ek likho.', key: rows[0]?.key };
+  if (!list.length) return { ok: false, msg: 'Enter at least one recipient or department.', key: rows[0]?.key };
   for (const r of list) {
-    if (pcs(r) < 1) return { ok: false, msg: (r.person.trim() || r.dept.trim()) + ': kam se kam 1 piece likho.', key: r.key };
+    if (pcs(r) < 1) return { ok: false, msg: (r.person.trim() || r.dept.trim()) + ': quantity must be at least 1.', key: r.key };
   }
   const total = list.reduce((s, r) => s + pcs(r), 0);
-  if (total > max) return { ok: false, msg: 'Kul ' + total + ' pcs ho gaye, par sirf ' + max + ' pcs hai.' };
+  if (total > max) return { ok: false, msg: 'Total quantity is ' + total + ', but only ' + max + ' pcs are available.' };
   return { ok: true, rows: list.map((r) => ({ person: r.person.trim(), dept: r.dept.trim(), qty: pcs(r) })), total };
 }
 
-/** Kai bande ek saath: har bande ki alag line. */
+/** Multiple recipients, each on a separate line. */
 export function IssueRowsEditor({
   rows,
   setRows,
@@ -56,8 +56,8 @@ export function IssueRowsEditor({
   return (
     <div className="irows">
       <div className="irow ihead" aria-hidden="true">
-        <span>Kisko diya (banda)</span>
-        <span>Department / kahan use hoga</span>
+        <span>Issued to (person)</span>
+        <span>Department / intended use</span>
         <span>Pcs</span>
         <span />
       </div>
@@ -70,7 +70,7 @@ export function IssueRowsEditor({
               id={i === 0 ? idPrefix + '-person' : undefined}
               aria-label={'Banda ' + n}
               list="dl-person"
-              placeholder="Banda ka naam"
+              placeholder="Person's name"
               autoComplete="off"
               value={r.person}
               onChange={(e) => upd(r.key, { person: e.target.value })}
@@ -94,7 +94,7 @@ export function IssueRowsEditor({
               value={r.qty}
               onChange={(e) => upd(r.key, { qty: e.target.value })}
             />
-            <button type="button" className="iconbtn sm" onClick={() => del(r.key)} disabled={rows.length === 1} aria-label={'Line ' + n + ' hatao'} title="Ye line hatao">
+            <button type="button" className="iconbtn sm" onClick={() => del(r.key)} disabled={rows.length === 1} aria-label={'Remove line ' + n} title="Remove this line">
               <Icon name="x" />
             </button>
           </div>
@@ -103,10 +103,10 @@ export function IssueRowsEditor({
       <div className="irow-foot">
         <button type="button" className="btn sm" onClick={add} id={idPrefix + '-add'}>
           <Icon name="plus" />
-          Aur banda jodo
+          Add another recipient
         </button>
         <span className={total > max ? 'err' : 'hint'} id={idPrefix + '-total'}>
-          Kul {total} pcs · {max} me se
+          Total {total} pcs · out of {max}
         </span>
       </div>
     </div>

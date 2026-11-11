@@ -34,25 +34,25 @@ export function Gate({
             <Icon name="boxFull" />
           </span>
           <span className="brand-t">
-            Office Register
+            Office Supplies
             <br />
             <span className="gate-brand-sub">
               - Amit Das
             </span>
           </span>
         </div>
-        <span className="gate-eyebrow">OFFICE SAMAN · REGISTER</span>
+        <span className="gate-eyebrow">OFFICE SUPPLIES · REGISTER</span>
         {kind === 'loading' && (
           <p className="gate-wait">
-            <span className="spin" />
-            Khul raha hai…
+            Loading…
+            <span className="gate-skeleton" aria-hidden="true" />
           </p>
         )}
         {kind === 'setup' && (
           <>
             <h2>Setup Firebase</h2>
             <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#94a3b8' }}>
-              Environment variables configure karne hain taaki app login aur data kaam kare.
+              Configure the required environment variables to continue.
             </p>
             {missingConfig.length > 0 && (
               <div style={{ width: '100%', textAlign: 'left', marginBottom: '10px', padding: '10px 12px', borderRadius: '10px', background: 'rgba(15, 23, 42, 0.68)', border: '1px solid rgba(129, 140, 248, 0.35)' }}>
@@ -67,24 +67,24 @@ export function Gate({
               </div>
             )}
             <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
-              README me step-by-step setup follow karo, phir app ko redeploy kar do.
+              Follow the setup steps in the README, then redeploy the app.
             </p>
           </>
         )}
         {kind === 'login' && (
           <>
-            <h2>Welcome 🙏</h2>
-            <p style={{ margin: '6px 0 18px 0', fontSize: '13px', color: '#94a3b8' }}>
-              Access karne ke liye sign in karein.
+            <h2>Welcome</h2>
+            <p className="gate-description">
+              Sign in to access the register.
             </p>
             <button type="button" className="btn primary gbtn" id="signinBtn" onClick={() => onSignIn(remember)}>
-              Google se Sign In
+              Sign in with Google
             </button>
             <label className="check remember" htmlFor="g-remember" style={{ marginTop: '12px' }}>
-              <input type="checkbox" id="g-remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Login yaad rakho
+              <input type="checkbox" id="g-remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Keep me signed in
             </label>
             <p className="hint" style={{ fontSize: '11px', color: '#64748b', marginTop: '8px' }}>
-              Shared PC pe check na karein.
+              Do not enable this on a shared computer.
             </p>
           </>
         )}
@@ -94,8 +94,8 @@ export function Gate({
               <Icon name="lock" />
             </div>
             <h2>Access Not Allowed 🔒</h2>
-            <p style={{ margin: '10px 0 18px 0', fontSize: '13px', color: '#94a3b8' }}>
-              Yeh account authorized nahi hai.
+            <p className="gate-description">
+              This account is not authorized.
             </p>
             <div className="inrow" style={{ justifyContent: 'center' }}>
               <button type="button" className="btn primary" onClick={onSignOut}>
