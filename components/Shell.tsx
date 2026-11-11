@@ -60,6 +60,7 @@ import {
   Lightbox,
   MoveModal,
 } from './Modals';
+import { PointerField } from './PointerField';
 import { useToast } from './Toast';
 
 type Phase = GateKind | 'ready';
@@ -656,6 +657,7 @@ export default function Shell({
             (menuOpen ? ' menu-open' : '')
           }
         >
+          <PointerField />
           <aside
             className="side"
             id="sideMenu"
