@@ -44,18 +44,18 @@ const config = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
 };
 
-const REQUIRED_FIREBASE_ENV_KEYS = [
-  'NEXT_PUBLIC_FIREBASE_API_KEY',
-  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-  'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-  'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-  'NEXT_PUBLIC_FIREBASE_APP_ID',
+const REQUIRED_FIREBASE_CONFIG = [
+  ['NEXT_PUBLIC_FIREBASE_API_KEY', config.apiKey],
+  ['NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', config.authDomain],
+  ['NEXT_PUBLIC_FIREBASE_PROJECT_ID', config.projectId],
+  ['NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', config.storageBucket],
+  ['NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', config.messagingSenderId],
+  ['NEXT_PUBLIC_FIREBASE_APP_ID', config.appId],
 ] as const;
 
-export const missingFirebaseConfig = REQUIRED_FIREBASE_ENV_KEYS.filter(
-  (key) => !process.env[key]?.trim(),
-);
+export const missingFirebaseConfig = REQUIRED_FIREBASE_CONFIG
+  .filter(([, value]) => !value.trim())
+  .map(([key]) => key);
 
 export const configOK = missingFirebaseConfig.length === 0;
 
