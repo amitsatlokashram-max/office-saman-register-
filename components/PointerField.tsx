@@ -15,12 +15,14 @@ const RIPPLE_DURATION = 700;
 
 export function PointerField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const orbitRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const orbit = orbitRef.current;
     const context = canvas?.getContext('2d');
 
-    if (!canvas || !context) return;
+    if (!canvas || !orbit || !context) return;
 
     const reducedMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)'
@@ -130,12 +132,16 @@ export function PointerField() {
       if (event.pointerType === 'touch') return;
       pointer.x = event.clientX;
       pointer.y = event.clientY;
+      orbit.style.setProperty('--pointer-x', `${event.clientX}px`);
+      orbit.style.setProperty('--pointer-y', `${event.clientY}px`);
+      orbit.style.opacity = '1';
       scheduleDraw();
     };
 
     const onPointerLeave = () => {
       pointer.x = -1_000;
       pointer.y = -1_000;
+      orbit.style.opacity = '0';
       scheduleDraw();
     };
 
@@ -173,5 +179,18 @@ export function PointerField() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="pointer-field" aria-hidden="true" />;
+  return (
+    <>
+      <canvas
+        ref={canvasRef}
+        className="pointer-field"
+        aria-hidden="true"
+      />
+      <div
+        ref={orbitRef}
+        className="pointer-orbit"
+        aria-hidden="true"
+      />
+    </>
+  );
 }

@@ -61,6 +61,7 @@ import {
   MoveModal,
 } from './Modals';
 import { PointerField } from './PointerField';
+import { ThemeToggle } from './ThemeToggle';
 import { useToast } from './Toast';
 
 type Phase = GateKind | 'ready';
@@ -101,13 +102,13 @@ function applySavedTheme() {
       savedColor &&
       THEME_COLORS.some((c) => c === savedColor)
         ? savedColor
-        : 'purple';
+        : 'cyan';
 
     root.dataset.theme = mode;
     root.dataset.color = color;
   } catch {
     root.dataset.theme = 'dark';
-    root.dataset.color = 'purple';
+    root.dataset.color = 'cyan';
   }
 }
 
@@ -683,6 +684,8 @@ export default function Shell({
                 </span>
               </Link>
 
+              <ThemeToggle className="desktop-theme-toggle" />
+
               <button
                 className="iconbtn side-x"
                 type="button"
@@ -807,6 +810,7 @@ export default function Shell({
               >
                 {initials(me?.name)}
               </Link>
+              <ThemeToggle className="mobile-theme-toggle" />
             </header>
 
             <main

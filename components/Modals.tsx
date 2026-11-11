@@ -711,7 +711,7 @@ const themeColors: {
   { id: 'red', label: 'Red', hex: '#DC2626' },
   { id: 'orange', label: 'Orange', hex: '#EA580C' },
   { id: 'pink', label: 'Pink', hex: '#DB2777' },
-  { id: 'cyan', label: 'Cyan', hex: '#0891B2' },
+  { id: 'cyan', label: 'Teal', hex: '#0F766E' },
 ];
 
 function ThemeSection() {
@@ -719,7 +719,7 @@ function ThemeSection() {
     useState<DisplayMode>('dark');
 
   const [color, setColor] =
-    useState<ColorTheme>('purple');
+    useState<ColorTheme>('cyan');
 
   useEffect(() => {
     const root = document.documentElement;
@@ -737,7 +737,7 @@ function ThemeSection() {
 
     const initialColor: ColorTheme =
       themeColors.find((c) => c.id === savedColor)
-        ?.id ?? 'purple';
+        ?.id ?? 'cyan';
 
     setMode(initialMode);
     setColor(initialColor);
@@ -799,7 +799,7 @@ function ThemeSection() {
           aria-pressed={mode === 'light'}
           onClick={() => changeMode('light')}
         >
-          ☀️ Light
+          <Icon name="sun" /> Light
         </button>
 
         <button
@@ -808,7 +808,7 @@ function ThemeSection() {
           aria-pressed={mode === 'dark'}
           onClick={() => changeMode('dark')}
         >
-          🌙 Dark
+          <Icon name="moon" /> Dark
         </button>
       </div>
 

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { rememberChoice } from '@/lib/session';
 import { Icon } from './Icon';
+import { PointerField } from './PointerField';
+import { ThemeToggle } from './ThemeToggle';
 
 export type GateKind = 'loading' | 'setup' | 'login' | 'denied';
 
@@ -24,6 +26,8 @@ export function Gate({
 
   return (
     <div className={'gate g-' + kind}>
+      <PointerField />
+      <ThemeToggle className="gate-theme-toggle" />
       <div className="gate-card" id="gateCard">
         <div className="brand">
           <span className="logo" aria-hidden="true">
@@ -32,11 +36,12 @@ export function Gate({
           <span className="brand-t">
             Office Register
             <br />
-            <span style={{ fontSize: '12px', color: '#818cf8', fontWeight: '600', display: 'block', marginTop: '2px' }}>
+            <span className="gate-brand-sub">
               - Amit Das
             </span>
           </span>
         </div>
+        <span className="gate-eyebrow">OFFICE SAMAN · REGISTER</span>
         {kind === 'loading' && (
           <p className="gate-wait">
             <span className="spin" />
