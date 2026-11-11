@@ -207,18 +207,25 @@ export function SamanPage() {
   // filters apply honge.
   const filtered = filteredItems(items, f, 'items');
 
-  // Ab Pahuncha (Received Date) ke hisaab se
-  // sabse nayi received date sabse upar.
-  // Jiska saman nahi aaya, wo sabse neeche.
+  // Ab createdAt ke hisaab se
+  // sabse nayi createdAt sabse upar.
+  // Jiska receivedDate nahi hai, wo sabse neeche.
   const list = [...filtered].sort((a, b) => {
-    const aDate = a.receivedDate || '';
-    const bDate = b.receivedDate || '';
+    const aCreated = a.createdAt || '';
+    const bCreated = b.createdAt || '';
 
-    if (!aDate && bDate) return 1;
-    if (aDate && !bDate) return -1;
-
-    const dateCompare = bDate.localeCompare(aDate);
+    const dateCompare = bCreated.localeCompare(aCreated);
     if (dateCompare !== 0) return dateCompare;
+
+    // Same createdAt par receivedDate ke hisaab se.
+    const aReceived = a.receivedDate || '';
+    const bReceived = b.receivedDate || '';
+
+    if (!aReceived && bReceived) return 1;
+    if (aReceived && !bReceived) return -1;
+
+    const receivedCompare = bReceived.localeCompare(aReceived);
+    if (receivedCompare !== 0) return receivedCompare;
 
     // Same received date par original filtered order.
     return 0;

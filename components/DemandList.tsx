@@ -871,11 +871,11 @@ _Sent by: ${me?.email || 'Office'}_`;
         onSubmit={handleAddDemand}
         className="no-print"
         style={{
-          background: 'var(--card-bg, #1e293b)',
+          background: 'var(--surface)',
           padding: '16px',
           borderRadius: '10px',
           marginBottom: '20px',
-          border: '1px solid var(--border, #334155)',
+          border: '1px solid var(--border)',
         }}
       >
         <h3
@@ -907,6 +907,7 @@ _Sent by: ${me?.email || 'Office'}_`;
               borderRadius: '6px',
               border: '1px solid var(--border)',
               background: 'var(--bg)',
+              color: 'var(--ink)',
             }}
           />
 
@@ -918,7 +919,7 @@ _Sent by: ${me?.email || 'Office'}_`;
               borderRadius: '6px',
               border: '1px solid var(--border)',
               background: 'var(--bg)',
-              color: '#fff',
+              color: 'var(--ink)',
             }}
           >
             {CATEGORIES.map((c) => (
@@ -926,8 +927,8 @@ _Sent by: ${me?.email || 'Office'}_`;
                 key={c}
                 value={c}
                 style={{
-                  background: '#1e293b',
-                  color: '#fff',
+                  background: 'var(--surface)',
+                  color: 'var(--ink)',
                 }}
               >
                 {c}
@@ -947,6 +948,7 @@ _Sent by: ${me?.email || 'Office'}_`;
               borderRadius: '6px',
               border: '1px solid var(--border)',
               background: 'var(--bg)',
+              color: 'var(--ink)',
             }}
           />
 
@@ -960,6 +962,7 @@ _Sent by: ${me?.email || 'Office'}_`;
               borderRadius: '6px',
               border: '1px solid var(--border)',
               background: 'var(--bg)',
+              color: 'var(--ink)',
             }}
           />
 
@@ -973,6 +976,7 @@ _Sent by: ${me?.email || 'Office'}_`;
               borderRadius: '6px',
               border: '1px solid var(--border)',
               background: 'var(--bg)',
+              color: 'var(--ink)',
             }}
           />
         </div>
@@ -988,6 +992,7 @@ _Sent by: ${me?.email || 'Office'}_`;
             borderRadius: '6px',
             border: '1px solid var(--border)',
             background: 'var(--bg)',
+            color: 'var(--ink)',
             marginBottom: '12px',
           }}
         />
@@ -1011,10 +1016,10 @@ _Sent by: ${me?.email || 'Office'}_`;
           gap: '10px',
           marginBottom: '20px',
           flexWrap: 'wrap',
-          background: 'rgba(255,255,255,0.03)',
+          background: 'var(--surface-2)',
           padding: '12px',
           borderRadius: '8px',
-          border: '1px solid var(--border, #334155)',
+          border: '1px solid var(--border)',
         }}
       >
         <input
@@ -1029,6 +1034,7 @@ _Sent by: ${me?.email || 'Office'}_`;
             borderRadius: '6px',
             border: '1px solid var(--border)',
             background: 'var(--bg)',
+            color: 'var(--ink)',
           }}
         />
 
@@ -1042,15 +1048,15 @@ _Sent by: ${me?.email || 'Office'}_`;
             borderRadius: '6px',
             border: '1px solid var(--border)',
             background: 'var(--bg)',
-            color: '#fff',
+            color: 'var(--ink)',
             minWidth: '150px',
           }}
         >
           <option
             value="All"
             style={{
-              background: '#1e293b',
-              color: '#fff',
+              background: 'var(--surface)',
+              color: 'var(--ink)',
             }}
           >
             📁 All Categories
@@ -1061,8 +1067,8 @@ _Sent by: ${me?.email || 'Office'}_`;
               key={c}
               value={c}
               style={{
-                background: '#1e293b',
-                color: '#fff',
+                background: 'var(--surface)',
+                color: 'var(--ink)',
               }}
             >
               {c}
@@ -1076,8 +1082,8 @@ _Sent by: ${me?.email || 'Office'}_`;
         <div
           className="no-print"
           style={{
-            background: '#1e293b',
-            border: '2px solid #3b82f6',
+            background: 'var(--surface)',
+            border: '2px solid var(--accent)',
             padding: '16px',
             borderRadius: '10px',
             marginBottom: '20px',
@@ -1093,7 +1099,7 @@ _Sent by: ${me?.email || 'Office'}_`;
           >
             <h3
               style={{
-                color: '#60a5fa',
+                color: 'var(--accent)',
                 margin: 0,
               }}
             >
@@ -1106,7 +1112,7 @@ _Sent by: ${me?.email || 'Office'}_`;
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#94a3b8',
+                color: 'var(--muted)',
                 fontSize: '18px',
                 cursor: 'pointer',
               }}
@@ -1151,7 +1157,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                   borderRadius: '6px',
                   border: '1px solid var(--border)',
                   background: 'var(--bg)',
-                  color: '#fff',
+                  color: 'var(--ink)',
                 }}
               >
                 {CATEGORIES.map((c) => (
@@ -1159,8 +1165,8 @@ _Sent by: ${me?.email || 'Office'}_`;
                     key={c}
                     value={c}
                     style={{
-                      background: '#1e293b',
-                      color: '#fff',
+                      background: 'var(--surface)',
+                      color: 'var(--ink)',
                     }}
                   >
                     {c}
@@ -1277,14 +1283,14 @@ _Sent by: ${me?.email || 'Office'}_`;
             aria-modal="true"
             aria-label="Select items for PDF"
             style={{
-              background: '#0f172a',
-              color: '#f8fafc',
+              background: 'var(--surface)',
+              color: 'var(--ink)',
               width: '100%',
               maxWidth: '620px',
               maxHeight: '90vh',
               overflowY: 'auto',
               borderRadius: '14px',
-              border: '1px solid #334155',
+              border: '1px solid var(--border)',
               boxShadow:
                 '0 20px 70px rgba(0,0,0,0.5)',
               padding: '22px',
@@ -1302,7 +1308,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                 style={{
                   margin: 0,
                   fontSize: '20px',
-                  color: '#fff',
+                  color: 'var(--ink)',
                 }}
               >
                 📄 Select Items for PDF
@@ -1313,7 +1319,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                 onClick={() => setPdfModalOpen(false)}
                 style={{
                   background: 'transparent',
-                  color: '#cbd5e1',
+                  color: 'var(--muted)',
                   border: 'none',
                   fontSize: '24px',
                   cursor: 'pointer',
@@ -1325,7 +1331,7 @@ _Sent by: ${me?.email || 'Office'}_`;
 
             <p
               style={{
-                color: '#94a3b8',
+                color: 'var(--muted)',
                 marginTop: '8px',
                 fontSize: '13px',
               }}
@@ -1363,9 +1369,9 @@ _Sent by: ${me?.email || 'Office'}_`;
                 type="button"
                 onClick={deselectAllPdfItems}
                 style={{
-                  background: '#334155',
-                  color: '#fff',
-                  border: 'none',
+                  background: 'var(--surface-2)',
+                  color: 'var(--ink)',
+                  border: '1px solid var(--border)',
                   padding: '8px 12px',
                   borderRadius: '6px',
                   cursor: 'pointer',
@@ -1378,7 +1384,7 @@ _Sent by: ${me?.email || 'Office'}_`;
             {/* PDF ITEMS CHECKBOX LIST */}
             <div
               style={{
-                border: '1px solid #334155',
+                border: '1px solid var(--border)',
                 borderRadius: '8px',
                 maxHeight: '280px',
                 overflowY: 'auto',
@@ -1394,10 +1400,10 @@ _Sent by: ${me?.email || 'Office'}_`;
                     padding: '12px',
                     cursor: 'pointer',
                     borderBottom:
-                      '1px solid rgba(148,163,184,0.15)',
+                      '1px solid var(--border)',
                     background:
                       selectedPdfIds.includes(d.id)
-                        ? 'rgba(37,99,235,0.13)'
+                        ? 'var(--accent-soft)'
                         : 'transparent',
                   }}
                 >
@@ -1422,7 +1428,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                   >
                     <div
                       style={{
-                        color: '#f8fafc',
+                        color: 'var(--ink)',
                         fontSize: '14px',
                         fontWeight: 'bold',
                       }}
@@ -1433,7 +1439,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                     <div
                       style={{
                         fontSize: '12px',
-                        color: '#94a3b8',
+                        color: 'var(--muted)',
                         marginTop: '4px',
                       }}
                     >
@@ -1452,9 +1458,9 @@ _Sent by: ${me?.email || 'Office'}_`;
               style={{
                 marginTop: '18px',
                 padding: '14px',
-                border: '1px solid #334155',
+                border: '1px solid var(--border)',
                 borderRadius: '8px',
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--sunk)',
               }}
             >
               <label
@@ -1484,7 +1490,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                   <strong
                     style={{
                       display: 'block',
-                      color: '#fff',
+                      color: 'var(--ink)',
                     }}
                   >
                     Show email (By:) in the PDF?
@@ -1492,7 +1498,7 @@ _Sent by: ${me?.email || 'Office'}_`;
 
                   <small
                     style={{
-                      color: '#94a3b8',
+                      color: 'var(--muted)',
                       display: 'block',
                       marginTop: '5px',
                     }}
@@ -1512,7 +1518,7 @@ _Sent by: ${me?.email || 'Office'}_`;
               style={{
                 marginTop: '16px',
                 padding: '14px',
-                background: '#1e293b',
+                background: 'var(--surface-2)',
                 borderRadius: '8px',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1524,7 +1530,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                 <span
                   style={{
                     display: 'block',
-                    color: '#94a3b8',
+                    color: 'var(--muted)',
                     fontSize: '12px',
                   }}
                 >
@@ -1533,7 +1539,7 @@ _Sent by: ${me?.email || 'Office'}_`;
 
                 <strong
                   style={{
-                    color: '#38bdf8',
+                    color: 'var(--accent)',
                     fontSize: '20px',
                   }}
                 >
@@ -1549,7 +1555,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                 <span
                   style={{
                     display: 'block',
-                    color: '#94a3b8',
+                    color: 'var(--muted)',
                     fontSize: '12px',
                   }}
                 >
@@ -1558,7 +1564,7 @@ _Sent by: ${me?.email || 'Office'}_`;
 
                 <strong
                   style={{
-                    color: '#4ade80',
+                    color: 'var(--ok)',
                     fontSize: '20px',
                   }}
                 >
@@ -1582,9 +1588,9 @@ _Sent by: ${me?.email || 'Office'}_`;
                   flex: 1,
                   padding: '12px',
                   borderRadius: '8px',
-                  border: '1px solid #475569',
-                  background: '#334155',
-                  color: '#fff',
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-2)',
+                  color: 'var(--ink)',
                   cursor: 'pointer',
                 }}
               >
@@ -1943,12 +1949,10 @@ _Sent by: ${me?.email || 'Office'}_`;
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                background:
-                  'var(--card-bg, #1e293b)',
+                background: 'var(--surface)',
                 padding: '12px 16px',
                 borderRadius: '8px',
-                border:
-                  '1px solid var(--border, #334155)',
+                border: '1px solid var(--border)',
                 flexWrap: 'wrap',
                 gap: '10px',
               }}
@@ -1970,6 +1974,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                   <strong
                     style={{
                       fontSize: '16px',
+                      color: 'var(--ink)',
                     }}
                   >
                     {d.item}
@@ -1978,8 +1983,8 @@ _Sent by: ${me?.email || 'Office'}_`;
                   <span
                     style={{
                       fontSize: '11px',
-                      background: '#334155',
-                      color: '#38bdf8',
+                      background: 'var(--surface-2)',
+                      color: 'var(--accent)',
                       padding: '2px 8px',
                       borderRadius: '12px',
                       fontWeight: 'bold',
@@ -1997,25 +2002,25 @@ _Sent by: ${me?.email || 'Office'}_`;
                 >
                   <span
                     style={{
-                      color: '#94a3b8',
+                      color: 'var(--muted)',
                     }}
                   >
                     Requested:
                   </span>{' '}
                   <strong
                     style={{
-                      color: '#38bdf8',
+                      color: 'var(--accent)',
                     }}
                   >
                     {d.qty} pcs
                   </strong>
                   {receivedQuantity(d) > 0 && (
                     <>
-                      <span style={{ marginLeft: '12px', color: '#94a3b8' }}>Aa chuka:</span>{' '}
-                      <strong style={{ color: '#4ade80' }}>{receivedQuantity(d)} pcs</strong>
+                      <span style={{ marginLeft: '12px', color: 'var(--muted)' }}>Received:</span>{' '}
+                      <strong style={{ color: 'var(--ok)' }}>{receivedQuantity(d)} pcs</strong>
                     </>
                   )}
-                  <span style={{ marginLeft: '12px', color: '#fbbf24' }}>
+                  <span style={{ marginLeft: '12px', color: 'var(--warn)' }}>
                     Remaining: {remainingDemandQty(d)} pcs
                   </span>
 
@@ -2023,7 +2028,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                     <span
                       style={{
                         marginLeft: '12px',
-                        color: '#a3e635',
+                        color: 'var(--ok)',
                       }}
                     >
                       Est: {inr(d.rate * remainingDemandQty(d))}
@@ -2043,11 +2048,11 @@ _Sent by: ${me?.email || 'Office'}_`;
                       rel="noreferrer"
                       style={{
                         fontSize: '12px',
-                        color: '#60a5fa',
+                        color: 'var(--info)',
                         textDecoration: 'underline',
                       }}
                     >
-                      🔗 Buy Link Kholo
+                      🔗 Buy Link
                     </a>
                   </div>
                 )}
@@ -2056,7 +2061,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                   <div
                     style={{
                       fontSize: '12px',
-                      color: '#94a3b8',
+                      color: 'var(--muted)',
                       marginTop: '2px',
                     }}
                   >
@@ -2078,11 +2083,11 @@ _Sent by: ${me?.email || 'Office'}_`;
                   type="button"
                   onClick={() => startEdit(d)}
                   style={{
-                    background: '#334155',
-                    color: '#e2e8f0',
+                    background: 'var(--surface-2)',
+                    color: 'var(--ink)',
                     padding: '6px 10px',
                     borderRadius: '6px',
-                    border: 'none',
+                    border: '1px solid var(--border)',
                     cursor: 'pointer',
                     fontSize: '12px',
                   }}
@@ -2096,11 +2101,11 @@ _Sent by: ${me?.email || 'Office'}_`;
                     handleDeleteDemand(d.id, d.item)
                   }
                   style={{
-                    background: '#991b1b',
-                    color: '#fca5a5',
+                    background: 'var(--danger-soft)',
+                    color: 'var(--danger)',
                     padding: '6px 10px',
                     borderRadius: '6px',
-                    border: 'none',
+                    border: '1px solid var(--danger-soft)',
                     cursor: 'pointer',
                     fontSize: '12px',
                   }}
@@ -2112,7 +2117,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                   type="button"
                   onClick={() => openReceiveForm(d)}
                   style={{
-                    background: '#16a34a',
+                    background: 'var(--ok)',
                     color: '#fff',
                     padding: '6px 12px',
                     borderRadius: '6px',
@@ -2142,7 +2147,7 @@ _Sent by: ${me?.email || 'Office'}_`;
             style={{
               cursor: 'pointer',
               fontWeight: 'bold',
-              color: '#94a3b8',
+              color: 'var(--muted)',
             }}
           >
             Previously Requested Items (
@@ -2163,12 +2168,12 @@ _Sent by: ${me?.email || 'Office'}_`;
                 style={{
                   padding: '8px 12px',
                   background:
-                    'rgba(255,255,255,0.03)',
+                    'var(--surface-2)',
                   borderRadius: '6px',
                   fontSize: '13px',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  color: '#94a3b8',
+                  color: 'var(--ink)',
                 }}
               >
                 <span>
@@ -2187,7 +2192,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                 >
                   <span
                     style={{
-                      color: '#4ade80',
+                      color: 'var(--ok)',
                     }}
                   >
                     ✓ Added to Main Stock
@@ -2201,7 +2206,7 @@ _Sent by: ${me?.email || 'Office'}_`;
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: '#ef4444',
+                      color: 'var(--danger)',
                       cursor: 'pointer',
                       fontSize: '12px',
                     }}
