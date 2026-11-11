@@ -31,7 +31,6 @@ import {
 } from '@/lib/sync';
 import {
   configOK,
-  missingFirebaseConfig,
   setNotifier,
   signInGoogle,
   signOutUser,
@@ -179,6 +178,7 @@ export default function Shell({
   const [phase, setPhase] = useState<Phase>(
     configOK ? 'loading' : 'setup'
   );
+  const [didCheckAuth, setDidCheckAuth] = useState(false);
 
   const [me, setMe] = useState<Me | null>(null);
   const [items, setItems] = useState<Item[]>([]);
@@ -279,7 +279,11 @@ export default function Shell({
       (m) => {
         setMe(m);
 
-        if (!m) {
+        // Pehle auth check par phase change mat karo.
+        // Firebase initialize hone ka wait karo.
+        if (!didCheckAuth) {
+          setDidCheckAuth(true);
+        } else if (!m) {
           setItems([]);
           setPhase('login');
         } else {
@@ -288,7 +292,7 @@ export default function Shell({
       },
       (e) => toast(authMsg(e))
     );
-  }, [toast]);
+  }, [toast, didCheckAuth]);
 
   const uidKey = me?.uid ?? '';
 
@@ -644,7 +648,6 @@ export default function Shell({
         <Gate
           kind={phase}
           email={me?.email}
-          missingConfig={missingFirebaseConfig}
           onSignIn={signIn}
           onSignOut={signOutNow}
         />

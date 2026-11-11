@@ -150,8 +150,21 @@ function settle<T>(p: Promise<T>): Promise<T | 'queued'> {
 export function watchAuth(cb: (me: Me | null) => void, onAuthError: (e: unknown) => void): () => void {
   const a = fbAuth();
   getRedirectResult(a).catch(onAuthError);
+  let firstCall = true;
   return onAuthStateChanged(a, (u) => {
-    // Purana yaad rakha login (ya doosre tab ka) ho aur "yaad rakho" nahi chuna: dobara login maango
+    // Pehle call par loading dikhavo, Firebase initialize hon ka baad.
+    if (firstCall) {
+      firstCall = false;
+      // Agar pehle call me user nahi aaya, tabhi login dikhavo.
+      if (!u) {
+        cb(null);
+        return;
+      }
+      // User mil gaya, loading hatake dashboard dikhavo.
+      cb(u ? { uid: u.uid, name: u.displayName || u.email || 'Koi', email: u.email || '' } : null);
+      return;
+    }
+    // Doosre call (state change) par: ya user login hai ya logout hua.
     if (u && !sessionValid()) {
       signOut(a).catch(() => {});
       cb(null);
